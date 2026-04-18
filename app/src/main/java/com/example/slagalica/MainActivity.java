@@ -12,6 +12,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.example.slagalica.ui.login.LoginActivity;
 import com.example.slagalica.ui.register.RegisterActivity;
+import com.example.slagalica.ui.game.GameActivity;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -35,6 +36,12 @@ public class MainActivity extends AppCompatActivity {
         Button tvRegister = findViewById(R.id.tvRegister);
         tvRegister.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, RegisterActivity.class);
+            startActivity(intent);
+        });
+
+        Button btnGuest = findViewById(R.id.btnGuest);
+        btnGuest.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, GameActivity.class);
             startActivity(intent);
         });
     }
