@@ -7,30 +7,54 @@
     android:background="@color/surface"
     android:elevation="4dp">
 
-    <TextView
+    <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:text="@string/tokens"
-        android:textColor="@color/secondary_dark"
-        android:textStyle="bold"
-        android:gravity="center" />
+        android:gravity="center">
 
-    <TextView
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:text="@string/stars"
-        android:textColor="@color/warning"
-        android:textStyle="bold"
-        android:gravity="center" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/tokens"
+            android:textColor="@color/secondary_dark"
+            android:textStyle="bold"
+            android:drawableStart="@drawable/ic_token"
+            android:drawablePadding="4dp"
+            android:gravity="center" />
+    </LinearLayout>
 
-    <TextView
+    <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:text="@string/league"
-        android:textColor="@color/primary"
-        android:textStyle="bold"
-        android:gravity="center" />
+        android:gravity="center">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/stars"
+            android:textColor="@color/warning"
+            android:textStyle="bold"
+            android:drawableStart="@drawable/ic_star"
+            android:drawablePadding="4dp"
+            android:gravity="center" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/league"
+            android:textColor="@color/primary"
+            android:textStyle="bold"
+            android:drawableStart="@drawable/ic_trophy"
+            android:drawablePadding="4dp"
+            android:gravity="center" />
+    </LinearLayout>
 </LinearLayout>
