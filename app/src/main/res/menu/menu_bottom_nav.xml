@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_play"
+        android:title="@string/nav_play"
+        android:icon="@android:drawable/ic_media_play"/>
+    <item
+        android:id="@+id/nav_profile"
+        android:title="@string/nav_profile"
+        android:icon="@android:drawable/ic_menu_manage"/>
+    <item
+        android:id="@+id/nav_statistics"
+        android:title="@string/nav_statistics"
+        android:icon="@android:drawable/ic_menu_sort_by_size"/>
+    <item
+        android:id="@+id/nav_friends"
+        android:title="@string/nav_friends"
+        android:icon="@android:drawable/ic_menu_share"/>
+</menu>
