@@ -20,9 +20,9 @@ public class HomeActivity extends AppCompatActivity {
             int itemId = item.getItemId();
 
             if (itemId == R.id.nav_play) {
-                selectedFragment = new PlayFragment();
+               selectedFragment = new PlayFragment();
             } else if (itemId == R.id.nav_profile) {
-                selectedFragment = new Fragment();
+                selectedFragment = new ProfileFragment();
             } else if (itemId == R.id.nav_statistics) {
                 selectedFragment = new Fragment();
             } else if (itemId == R.id.nav_friends) {
