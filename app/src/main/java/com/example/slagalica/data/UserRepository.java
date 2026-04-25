@@ -2,6 +2,7 @@ package com.example.slagalica.data;
 
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -21,5 +22,13 @@ public class UserRepository {
         return db.collection("users").document(uid)
                 .update("tokens", FieldValue.increment(-amount));
     }
-}
 
+    public Task<DocumentSnapshot> getUser(String uid) {
+        return db.collection("users").document(uid).get();
+    }
+
+    public Task<Void> updateUserStats(String uid, int newStars, int newTokens) {
+        return db.collection("users").document(uid)
+                .update("stars", newStars, "tokens", newTokens);
+    }
+}

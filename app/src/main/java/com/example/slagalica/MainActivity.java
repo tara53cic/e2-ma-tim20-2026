@@ -12,7 +12,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.example.slagalica.ui.login.LoginActivity;
 import com.example.slagalica.ui.register.RegisterActivity;
-import com.example.slagalica.ui.game.GameActivity;
+import com.example.slagalica.ui.match.MatchActivity;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -41,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
 
         Button btnGuest = findViewById(R.id.btnGuest);
         btnGuest.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, GameActivity.class);
+            Intent intent = new Intent(MainActivity.this, MatchActivity.class);
             startActivity(intent);
         });
     }

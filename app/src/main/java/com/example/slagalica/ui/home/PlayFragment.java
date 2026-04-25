@@ -12,19 +12,51 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.example.slagalica.R;
-import com.example.slagalica.ui.game.GameActivity;
+import com.example.slagalica.data.MatchRepository;
+import com.example.slagalica.domain.models.Match;
+import com.example.slagalica.ui.match.MatchActivity;
+import android.widget.Toast;
 
 public class PlayFragment extends Fragment {
+
+    private MatchRepository matchRepository;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_play, container, false);
 
+        matchRepository = new MatchRepository();
+
         Button btnStartGame = view.findViewById(R.id.btnStartGame);
         btnStartGame.setOnClickListener(v -> {
-            Intent intent = new Intent(getActivity(), GameActivity.class);
-            startActivity(intent);
+            String currentUserId = matchRepository.getCurrentUserId();
+            if (currentUserId == null) {
+                Toast.makeText(getContext(), "User not logged in!", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            Match newMatch = new Match(
+                    null,
+                    currentUserId,
+                    null,
+                    0,
+                    0,
+                    "IN_PROGRESS"
+            );
+
+            btnStartGame.setEnabled(false);
+
+            matchRepository.createMatch(newMatch).addOnCompleteListener(task -> {
+                btnStartGame.setEnabled(true);
+                if (task.isSuccessful()) {
+                    Intent intent = new Intent(getActivity(), MatchActivity.class);
+                    intent.putExtra("MATCH_ID", newMatch.getId());
+                    startActivity(intent);
+                } else {
+                    Toast.makeText(getContext(), "Failed to create match", Toast.LENGTH_SHORT).show();
+                }
+            });
         });
 
         return view;

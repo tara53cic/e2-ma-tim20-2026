@@ -1,4 +1,4 @@
-package com.example.slagalica.ui.game;
+package com.example.slagalica.ui.match.number_game;
 
 import android.os.Handler;
 import android.os.Looper;
@@ -26,7 +26,6 @@ public class NumberGameViewModel extends ViewModel {
     private final MutableLiveData<List<String>> smallNumbers = new MutableLiveData<>(Arrays.asList("","","","","",""));
     private final MutableLiveData<String> currentExpression = new MutableLiveData<>("");
     private final MutableLiveData<List<Boolean>> usedNumbers = new MutableLiveData<>(Arrays.asList(false,false,false,false,false,false));
-    private final MutableLiveData<Boolean> isValidResult = new MutableLiveData<>(false);
 
     private final List<String> expressionTokens = new ArrayList<>();
     private final List<Integer> tokenSourceIndex = new ArrayList<>();

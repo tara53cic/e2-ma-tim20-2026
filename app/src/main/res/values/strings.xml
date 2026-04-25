@@ -41,4 +41,9 @@
     <string name="stop">STOP</string>
     <string name="calc_screen_hint"></string>
     <string name="target_number">123</string>
+
+    <string name="game_over">KRAJ PARTIJE</string>
+    <string name="loading_results">Učitavanje rezultata...</string>
+    <string name="plus_zero">+0</string>
+    <string name="return_to_home">POVRATAK NA POČETNI EKRAN</string>
 </resources>

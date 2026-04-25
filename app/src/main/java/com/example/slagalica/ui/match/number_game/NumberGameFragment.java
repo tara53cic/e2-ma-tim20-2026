@@ -1,10 +1,9 @@
-package com.example.slagalica.ui.game;
+package com.example.slagalica.ui.match.number_game;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.content.Context;
@@ -19,6 +18,7 @@ import androidx.lifecycle.ViewModelProvider;
 import com.example.slagalica.R;
 import com.example.slagalica.domain.service.NumberGameScoringService;
 import com.example.slagalica.domain.usecase.EvaluateMathExpressionUseCase;
+import com.example.slagalica.ui.match.MatchViewModel;
 import com.example.slagalica.utils.ShakeDetector;
 import com.google.android.material.button.MaterialButton;
 
@@ -28,7 +28,7 @@ import java.util.List;
 public class NumberGameFragment extends Fragment {
 
     private NumberGameViewModel viewModel;
-    private SharedGameViewModel sharedViewModel;
+    private MatchViewModel sharedViewModel;
     private EvaluateMathExpressionUseCase evaluateMathExpressionUseCase;
     private NumberGameScoringService scoringService;
     private SensorManager sensorManager;
@@ -46,7 +46,7 @@ public class NumberGameFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         viewModel = new ViewModelProvider(this).get(NumberGameViewModel.class);
-        sharedViewModel = new ViewModelProvider(requireActivity()).get(SharedGameViewModel.class);
+        sharedViewModel = new ViewModelProvider(requireActivity()).get(MatchViewModel.class);
         evaluateMathExpressionUseCase = new EvaluateMathExpressionUseCase();
         scoringService = new NumberGameScoringService();
 
@@ -168,14 +168,12 @@ public class NumberGameFragment extends Fragment {
         String targetStr = viewModel.getTargetNumber().getValue();
         long targetLong = targetStr != null && !targetStr.equals("---") ? Long.parseLong(targetStr) : 0;
 
-        String phase = sharedViewModel.getCurrentFragment().getValue();
-        boolean isRound1 = "MOJ_BROJ_R1".equals(phase);
 
         long opponentResult = 0L;
 
         int points = scoringService.calculatePoints(targetLong, resLong, opponentResult, true);
 
-        sharedViewModel.addPlayer1Points(points);
+        sharedViewModel.addCurrentPlayerPoints(points);
 
         Toast.makeText(getContext(), "Result: " + resLong + " | Points: " + points, Toast.LENGTH_LONG).show();
         sharedViewModel.advanceGamePhase();

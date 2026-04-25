@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background"
-    tools:context="com.example.slagalica.ui.game.GameActivity">
+    tools:context="com.example.slagalica.ui.match.MatchActivity">
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/topBarGame"
@@ -52,11 +52,13 @@
                 android:layout_marginStart="12dp">
                 <TextView
                     android:id="@+id/tvPlayer1Name"
-                    android:layout_width="wrap_content"
+                    android:layout_width="64dp"
                     android:layout_height="wrap_content"
                     android:text="@string/player_guest"
                     android:textColor="@color/text_primary"
                     android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end"
                     android:textSize="16sp" />
                 <TextView
                     android:id="@+id/tvPlayer1Score"
@@ -104,11 +106,14 @@
                 android:layout_marginEnd="12dp">
                 <TextView
                     android:id="@+id/tvPlayer2Name"
-                    android:layout_width="wrap_content"
+                    android:layout_width="64dp"
                     android:layout_height="wrap_content"
                     android:text="@string/player_guest"
                     android:textColor="@color/text_primary"
                     android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:gravity="end"
                     android:textSize="16sp" />
                 <TextView
                     android:id="@+id/tvPlayer2Score"

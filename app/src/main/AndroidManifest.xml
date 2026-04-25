@@ -25,7 +25,7 @@
         <activity android:name=".ui.register.RegisterActivity" />
         <activity android:name=".ui.home.HomeActivity" />
         <activity android:name=".ui.reset_password.ResetPasswordActivity" />
-        <activity android:name=".ui.game.GameActivity" />
+        <activity android:name=".ui.match.MatchActivity" />
     </application>
 
 </manifest>
