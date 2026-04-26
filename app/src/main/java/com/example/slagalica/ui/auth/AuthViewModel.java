@@ -1,15 +1,18 @@
 package com.example.slagalica.ui.auth;
 
+import android.app.Application;
+import androidx.annotation.NonNull;
+import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.ViewModel;
 
+import com.example.slagalica.R;
 import com.example.slagalica.data.AuthRepository;
 import com.example.slagalica.domain.models.User;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-public class AuthViewModel extends ViewModel {
+public class AuthViewModel extends AndroidViewModel {
 
     private final AuthRepository repository;
     private final FirebaseFirestore db;
@@ -21,7 +24,8 @@ public class AuthViewModel extends ViewModel {
     private final MutableLiveData<Boolean> passwordResetSuccess = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
 
-    public AuthViewModel() {
+    public AuthViewModel(@NonNull Application application) {
+        super(application);
         this.repository = new AuthRepository();
         this.db = FirebaseFirestore.getInstance();
     }
@@ -35,11 +39,11 @@ public class AuthViewModel extends ViewModel {
 
     public void register(String email, String username, String region, String password, String repeatPassword) {
         if (email.isEmpty() || username.isEmpty() || region.isEmpty() || password.isEmpty()) {
-            errorMessage.setValue("Sva polja moraju biti popunjena.");
+            errorMessage.setValue(getApplication().getString(R.string.error_all_fields_required));
             return;
         }
         if (!password.equals(repeatPassword)) {
-            errorMessage.setValue("Lozinke se ne poklapaju.");
+            errorMessage.setValue(getApplication().getString(R.string.error_passwords_dont_match));
             return;
         }
 
@@ -58,19 +62,19 @@ public class AuthViewModel extends ViewModel {
                         })
                         .addOnFailureListener(e -> {
                             isLoading.setValue(false);
-                            errorMessage.setValue("Greška pri čuvanju podataka: " + e.getMessage());
+                            errorMessage.setValue(getApplication().getString(R.string.error_saving_data, e.getMessage()));
                         });
                 }
             })
             .addOnFailureListener(e -> {
                 isLoading.setValue(false);
-                errorMessage.setValue("Greška pri registraciji: " + e.getMessage());
+                errorMessage.setValue(getApplication().getString(R.string.error_registration, e.getMessage()));
             });
     }
 
     public void login(String emailOrUsername, String password) {
         if (emailOrUsername.isEmpty() || password.isEmpty()) {
-            errorMessage.setValue("Unesite email/korisničko ime i lozinku.");
+            errorMessage.setValue(getApplication().getString(R.string.error_enter_credentials));
             return;
         }
 
@@ -89,16 +93,16 @@ public class AuthViewModel extends ViewModel {
                             performFirebaseLogin(email, password);
                         } else {
                             isLoading.setValue(false);
-                            errorMessage.setValue("Korisnik nije pronađen.");
+                            errorMessage.setValue(getApplication().getString(R.string.error_user_not_found));
                         }
                     } else {
                         isLoading.setValue(false);
-                        errorMessage.setValue("Korisnik sa ovim korisničkim imenom ne postoji.");
+                        errorMessage.setValue(getApplication().getString(R.string.error_username_not_found));
                     }
                 })
                 .addOnFailureListener(e -> {
                     isLoading.setValue(false);
-                    errorMessage.setValue("Greška pri pretrazi korisnika.");
+                    errorMessage.setValue(getApplication().getString(R.string.error_search_user));
                 });
         }
     }
@@ -113,12 +117,12 @@ public class AuthViewModel extends ViewModel {
                 } else {
                     repository.logout();
                     isLoading.setValue(false);
-                    errorMessage.setValue("Morate verifikovati email pre prijavljivanja.");
+                    errorMessage.setValue(getApplication().getString(R.string.error_verify_email));
                 }
             })
             .addOnFailureListener(e -> {
                 isLoading.setValue(false);
-                errorMessage.setValue("Pogrešni kredencijali ili greška pri prijavi.");
+                errorMessage.setValue(getApplication().getString(R.string.error_login_failed));
             });
     }
 
@@ -129,17 +133,17 @@ public class AuthViewModel extends ViewModel {
 
     public void updatePassword(String oldPassword, String newPassword, String repeatNewPassword) {
         if (oldPassword.isEmpty() || newPassword.isEmpty() || repeatNewPassword.isEmpty()) {
-            errorMessage.setValue("Sva polja moraju biti popunjena.");
+            errorMessage.setValue(getApplication().getString(R.string.error_all_fields_required));
             return;
         }
         if (!newPassword.equals(repeatNewPassword)) {
-            errorMessage.setValue("Nove lozinke se ne poklapaju.");
+            errorMessage.setValue(getApplication().getString(R.string.error_new_passwords_dont_match));
             return;
         }
 
         FirebaseUser user = repository.getCurrentUser();
         if (user == null || user.getEmail() == null) {
-            errorMessage.setValue("Korisnik nije ulogovan.");
+            errorMessage.setValue(getApplication().getString(R.string.error_user_not_logged_in));
             return;
         }
 
@@ -156,12 +160,12 @@ public class AuthViewModel extends ViewModel {
                     })
                     .addOnFailureListener(e -> {
                         isLoading.setValue(false);
-                        errorMessage.setValue("Greška pri promeni lozinke: " + e.getMessage());
+                        errorMessage.setValue(getApplication().getString(R.string.error_update_password, e.getMessage()));
                     });
             })
             .addOnFailureListener(e -> {
                 isLoading.setValue(false);
-                errorMessage.setValue("Neispravna stara lozinka.");
+                errorMessage.setValue(getApplication().getString(R.string.error_invalid_old_password));
             });
     }
 }

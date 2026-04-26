@@ -55,7 +55,7 @@
                     android:layout_width="64dp"
                     android:layout_height="wrap_content"
                     android:text="@string/player_guest"
-                    android:textColor="@color/text_primary"
+                    android:textColor="@color/background"
                     android:textStyle="bold"
                     android:maxLines="1"
                     android:ellipsize="end"
@@ -65,7 +65,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/points_0"
-                    android:textColor="@color/primary"
+                    android:textColor="@color/background"
                     android:textStyle="bold"
                     android:textSize="18sp" />
             </LinearLayout>
@@ -78,7 +78,7 @@
             android:background="@drawable/bg_timer_circle"
             android:gravity="center"
             android:text="@string/timer_60"
-            android:textColor="@color/surface"
+            android:textColor="@color/background"
             android:textSize="22sp"
             android:textStyle="bold"
             app:layout_constraintTop_toTopOf="parent"
@@ -109,7 +109,7 @@
                     android:layout_width="64dp"
                     android:layout_height="wrap_content"
                     android:text="@string/player_guest"
-                    android:textColor="@color/text_primary"
+                    android:textColor="@color/background"
                     android:textStyle="bold"
                     android:maxLines="1"
                     android:ellipsize="end"
@@ -120,7 +120,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/points_0"
-                    android:textColor="@color/primary"
+                    android:textColor="@color/background"
                     android:textStyle="bold"
                     android:textSize="18sp" />
             </LinearLayout>

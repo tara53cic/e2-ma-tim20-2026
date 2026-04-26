@@ -86,7 +86,7 @@
             android:layout_height="wrap_content"
             android:text="@string/log_in"
             android:textAllCaps="false"
-            android:textColor="@color/surface"
+            android:textColor="@color/background"
             app:backgroundTint="@color/primary"
             app:cornerRadius="12dp"
             android:layout_marginTop="32dp"

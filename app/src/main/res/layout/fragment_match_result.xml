@@ -58,7 +58,7 @@
             android:gravity="center"
             android:textSize="24sp"
             android:textStyle="bold"
-            android:textColor="@color/secondary_dark"
+            android:textColor="@color/warning"
             android:drawableStart="@drawable/ic_token"
             android:drawablePadding="8dp"
             android:text="@string/plus_zero"/>
@@ -71,7 +71,7 @@
         android:layout_height="wrap_content"
         android:padding="16dp"
         android:text="@string/return_to_home"
-        android:textColor="@color/white"
+        android:textColor="@color/background"
         android:textSize="10sp"
         android:letterSpacing="0.1"
         android:backgroundTint="@color/primary"/>

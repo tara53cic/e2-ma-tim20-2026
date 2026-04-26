@@ -14,7 +14,7 @@
         android:textSize="20sp"
         android:padding="24dp"
         app:cornerRadius="16dp"
-        android:textColor="@color/surface"
+        android:textColor="@color/background"
         app:backgroundTint="@color/primary"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"

@@ -24,7 +24,7 @@
             android:background="@drawable/bg_card"
             android:gravity="center"
             android:text="@string/target_number"
-            android:textColor="@color/primary"
+            android:textColor="@color/background"
             android:textSize="32sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -41,17 +41,17 @@
         app:layout_constraintEnd_toEndOf="parent">
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnNum1" style="@style/Widget.MaterialComponents.Button" android:layout_width="40dp" android:layout_height="60dp" tools:text="" android:contentDescription="Broj 1" app:cornerRadius="12dp" android:layout_margin="4dp" android:insetLeft="0dp" android:insetRight="0dp" android:insetTop="0dp" android:insetBottom="0dp" android:padding="0dp" minWidth="0dp" minHeight="0dp" app:backgroundTint="@color/surface" app:strokeColor="@color/divider" app:strokeWidth="1dp" android:textColor="@color/primary" android:textStyle="bold" android:textSize="18sp"/>
+            android:id="@+id/btnNum1" style="@style/Widget.MaterialComponents.Button" android:layout_width="40dp" android:layout_height="60dp" tools:text="" android:contentDescription="Broj 1" app:cornerRadius="12dp" android:layout_margin="4dp" android:insetLeft="0dp" android:insetRight="0dp" android:insetTop="0dp" android:insetBottom="0dp" android:padding="0dp" minWidth="0dp" minHeight="0dp" app:backgroundTint="@color/surface" app:strokeColor="@color/divider" app:strokeWidth="1dp" android:textColor="@color/background" android:textStyle="bold" android:textSize="18sp"/>
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnNum2" style="@style/Widget.MaterialComponents.Button" android:layout_width="40dp" android:layout_height="60dp" tools:text="" android:contentDescription="Broj 2" app:cornerRadius="12dp" android:layout_margin="4dp" android:insetLeft="0dp" android:insetRight="0dp" android:insetTop="0dp" android:insetBottom="0dp" android:padding="0dp" minWidth="0dp" minHeight="0dp" app:backgroundTint="@color/surface" app:strokeColor="@color/divider" app:strokeWidth="1dp" android:textColor="@color/primary" android:textStyle="bold" android:textSize="18sp"/>
+            android:id="@+id/btnNum2" style="@style/Widget.MaterialComponents.Button" android:layout_width="40dp" android:layout_height="60dp" tools:text="" android:contentDescription="Broj 2" app:cornerRadius="12dp" android:layout_margin="4dp" android:insetLeft="0dp" android:insetRight="0dp" android:insetTop="0dp" android:insetBottom="0dp" android:padding="0dp" minWidth="0dp" minHeight="0dp" app:backgroundTint="@color/surface" app:strokeColor="@color/divider" app:strokeWidth="1dp" android:textColor="@color/background" android:textStyle="bold" android:textSize="18sp"/>
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnNum3" style="@style/Widget.MaterialComponents.Button" android:layout_width="40dp" android:layout_height="60dp" tools:text="" android:contentDescription="Broj 3" app:cornerRadius="12dp" android:layout_margin="4dp" android:insetLeft="0dp" android:insetRight="0dp" android:insetTop="0dp" android:insetBottom="0dp" android:padding="0dp" minWidth="0dp" minHeight="0dp" app:backgroundTint="@color/surface" app:strokeColor="@color/divider" app:strokeWidth="1dp" android:textColor="@color/primary" android:textStyle="bold" android:textSize="18sp"/>
+            android:id="@+id/btnNum3" style="@style/Widget.MaterialComponents.Button" android:layout_width="40dp" android:layout_height="60dp" tools:text="" android:contentDescription="Broj 3" app:cornerRadius="12dp" android:layout_margin="4dp" android:insetLeft="0dp" android:insetRight="0dp" android:insetTop="0dp" android:insetBottom="0dp" android:padding="0dp" minWidth="0dp" minHeight="0dp" app:backgroundTint="@color/surface" app:strokeColor="@color/divider" app:strokeWidth="1dp" android:textColor="@color/background" android:textStyle="bold" android:textSize="18sp"/>
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnNum4" style="@style/Widget.MaterialComponents.Button" android:layout_width="40dp" android:layout_height="60dp" tools:text="" android:contentDescription="Broj 4" app:cornerRadius="12dp" android:layout_margin="4dp" android:insetLeft="0dp" android:insetRight="0dp" android:insetTop="0dp" android:insetBottom="0dp" android:padding="0dp" minWidth="0dp" minHeight="0dp" app:backgroundTint="@color/surface" app:strokeColor="@color/divider" app:strokeWidth="1dp" android:textColor="@color/primary" android:textStyle="bold" android:textSize="18sp"/>
+            android:id="@+id/btnNum4" style="@style/Widget.MaterialComponents.Button" android:layout_width="40dp" android:layout_height="60dp" tools:text="" android:contentDescription="Broj 4" app:cornerRadius="12dp" android:layout_margin="4dp" android:insetLeft="0dp" android:insetRight="0dp" android:insetTop="0dp" android:insetBottom="0dp" android:padding="0dp" minWidth="0dp" minHeight="0dp" app:backgroundTint="@color/surface" app:strokeColor="@color/divider" app:strokeWidth="1dp" android:textColor="@color/background" android:textStyle="bold" android:textSize="18sp"/>
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnNumMid" style="@style/Widget.MaterialComponents.Button" android:layout_width="60dp" android:minWidth="60dp" android:layout_height="60dp" tools:text="" android:contentDescription="Srednji broj" app:cornerRadius="12dp" android:layout_margin="4dp" android:insetLeft="0dp" android:insetRight="0dp" android:insetTop="0dp" android:insetBottom="0dp" android:padding="0dp" minHeight="0dp" app:backgroundTint="@color/surface" app:strokeColor="@color/divider" app:strokeWidth="1dp" android:textColor="@color/primary" android:textStyle="bold" android:textSize="18sp"/>
+            android:id="@+id/btnNumMid" style="@style/Widget.MaterialComponents.Button" android:layout_width="60dp" android:minWidth="60dp" android:layout_height="60dp" tools:text="" android:contentDescription="Srednji broj" app:cornerRadius="12dp" android:layout_margin="4dp" android:insetLeft="0dp" android:insetRight="0dp" android:insetTop="0dp" android:insetBottom="0dp" android:padding="0dp" minHeight="0dp" app:backgroundTint="@color/surface" app:strokeColor="@color/divider" app:strokeWidth="1dp" android:textColor="@color/background" android:textStyle="bold" android:textSize="18sp"/>
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnNumLarge" style="@style/Widget.MaterialComponents.Button" android:layout_width="72dp" android:minWidth="72dp" android:layout_height="60dp" tools:text="" android:contentDescription="Veliki broj" app:cornerRadius="12dp" android:layout_margin="4dp" android:insetLeft="0dp" android:insetRight="0dp" android:insetTop="0dp" android:insetBottom="0dp" android:padding="0dp" minHeight="0dp" app:backgroundTint="@color/surface" app:strokeColor="@color/divider" app:strokeWidth="1dp" android:textColor="@color/primary" android:textStyle="bold" android:textSize="18sp"/>
+            android:id="@+id/btnNumLarge" style="@style/Widget.MaterialComponents.Button" android:layout_width="72dp" android:minWidth="72dp" android:layout_height="60dp" tools:text="" android:contentDescription="Veliki broj" app:cornerRadius="12dp" android:layout_margin="4dp" android:insetLeft="0dp" android:insetRight="0dp" android:insetTop="0dp" android:insetBottom="0dp" android:padding="0dp" minHeight="0dp" app:backgroundTint="@color/surface" app:strokeColor="@color/divider" app:strokeWidth="1dp" android:textColor="@color/background" android:textStyle="bold" android:textSize="18sp"/>
     </LinearLayout>
 
     <LinearLayout
@@ -66,17 +66,17 @@
         app:layout_constraintEnd_toEndOf="parent">
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnOpPlus" style="@style/Widget.MaterialComponents.Button" android:layout_width="48dp" android:layout_height="56dp" android:text="+" android:contentDescription="Sabiranje" app:backgroundTint="@color/divider" android:textColor="@color/text_primary" app:cornerRadius="8dp" android:layout_margin="4dp"/>
+            android:id="@+id/btnOpPlus" style="@style/Widget.MaterialComponents.Button" android:layout_width="48dp" android:layout_height="56dp" android:text="+" android:contentDescription="Sabiranje" app:backgroundTint="@color/divider" android:textColor="@color/background" app:cornerRadius="8dp" android:layout_margin="4dp"/>
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnOpMinus" style="@style/Widget.MaterialComponents.Button" android:layout_width="48dp" android:layout_height="56dp" android:text="-" android:contentDescription="Oduzimanje" app:backgroundTint="@color/divider" android:textColor="@color/text_primary" app:cornerRadius="8dp" android:layout_margin="4dp"/>
+            android:id="@+id/btnOpMinus" style="@style/Widget.MaterialComponents.Button" android:layout_width="48dp" android:layout_height="56dp" android:text="-" android:contentDescription="Oduzimanje" app:backgroundTint="@color/divider" android:textColor="@color/background" app:cornerRadius="8dp" android:layout_margin="4dp"/>
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnOpMul" style="@style/Widget.MaterialComponents.Button" android:layout_width="48dp" android:layout_height="56dp" android:text="*" android:contentDescription="Množenje" app:backgroundTint="@color/divider" android:textColor="@color/text_primary" app:cornerRadius="8dp" android:layout_margin="4dp"/>
+            android:id="@+id/btnOpMul" style="@style/Widget.MaterialComponents.Button" android:layout_width="48dp" android:layout_height="56dp" android:text="*" android:contentDescription="Množenje" app:backgroundTint="@color/divider" android:textColor="@color/background" app:cornerRadius="8dp" android:layout_margin="4dp"/>
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnOpDiv" style="@style/Widget.MaterialComponents.Button" android:layout_width="48dp" android:layout_height="56dp" android:text="/" android:contentDescription="Deljenje" app:backgroundTint="@color/divider" android:textColor="@color/text_primary" app:cornerRadius="8dp" android:layout_margin="4dp"/>
+            android:id="@+id/btnOpDiv" style="@style/Widget.MaterialComponents.Button" android:layout_width="48dp" android:layout_height="56dp" android:text="/" android:contentDescription="Deljenje" app:backgroundTint="@color/divider" android:textColor="@color/background" app:cornerRadius="8dp" android:layout_margin="4dp"/>
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnOpLeftParen" style="@style/Widget.MaterialComponents.Button" android:layout_width="48dp" android:layout_height="56dp" android:text="(" android:contentDescription="Leva zagrada" app:backgroundTint="@color/divider" android:textColor="@color/text_primary" app:cornerRadius="8dp" android:layout_margin="4dp"/>
+            android:id="@+id/btnOpLeftParen" style="@style/Widget.MaterialComponents.Button" android:layout_width="48dp" android:layout_height="56dp" android:text="(" android:contentDescription="Leva zagrada" app:backgroundTint="@color/divider" android:textColor="@color/background" app:cornerRadius="8dp" android:layout_margin="4dp"/>
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnOpRightParen" style="@style/Widget.MaterialComponents.Button" android:layout_width="48dp" android:layout_height="56dp" android:text=")" android:contentDescription="Desna zagrada" app:backgroundTint="@color/divider" android:textColor="@color/text_primary" app:cornerRadius="8dp" android:layout_margin="4dp"/>
+            android:id="@+id/btnOpRightParen" style="@style/Widget.MaterialComponents.Button" android:layout_width="48dp" android:layout_height="56dp" android:text=")" android:contentDescription="Desna zagrada" app:backgroundTint="@color/divider" android:textColor="@color/background" app:cornerRadius="8dp" android:layout_margin="4dp"/>
     </LinearLayout>
 
     <LinearLayout
@@ -114,7 +114,7 @@
                 android:padding="16dp"
                 android:text=""
                 tools:text="15 * (10 + 2)"
-                android:textColor="@color/text_primary"
+                android:textColor="@color/background"
                 android:textSize="24sp"
                 android:textStyle="bold" />
 

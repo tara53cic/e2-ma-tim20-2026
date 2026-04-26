@@ -79,7 +79,7 @@ public class StepByStepFragment extends Fragment {
                     currentAnswer = currentData.getFinal_answer();
                     setupRound();
                 } else {
-                    Toast.makeText(getContext(), "Nije moguće učitati podatke!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), getString(R.string.error_loading_data), Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -129,13 +129,13 @@ public class StepByStepFragment extends Fragment {
             sharedViewModel.addCurrentPlayerPoints(points);
 
             if (isOpponentPhase) {
-                Toast.makeText(getContext(), "Protivnik je tačno odgovorio! (" + points + " bodova)", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), getString(R.string.opponent_correct_answer, points), Toast.LENGTH_SHORT).show();
             } else {
-                Toast.makeText(getContext(), "Tačno! Osvojeno bodova: " + points, Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), getString(R.string.correct_answer_points, points), Toast.LENGTH_SHORT).show();
             }
             showAnswerAndAdvance();
         } else {
-            Toast.makeText(getContext(), "Netačno!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), getString(R.string.incorrect_answer), Toast.LENGTH_SHORT).show();
             etStepAnswer.setText("");
             if (isOpponentPhase) {
                  handleTimeoutOrMiss();
@@ -146,7 +146,7 @@ public class StepByStepFragment extends Fragment {
 
     private void startOpponentPhase() {
         isOpponentPhase = true;
-        Toast.makeText(getContext(), "Vreme je isteklo. Protivnik ima 10s za odgovor!", Toast.LENGTH_LONG).show();
+        Toast.makeText(getContext(), getString(R.string.time_expired_opponent_turn), Toast.LENGTH_LONG).show();
         sharedViewModel.startRoundTimer(10, this::handleTimeoutOrMiss);
     }
 

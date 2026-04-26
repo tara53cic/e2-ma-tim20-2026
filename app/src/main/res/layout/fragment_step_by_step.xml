@@ -23,7 +23,7 @@
             android:background="@drawable/bg_card"
             android:gravity="center"
             android:text=""
-            android:textColor="@color/text_primary"
+            android:textColor="@color/background"
             android:textSize="18sp"
             android:layout_marginBottom="8dp" />
 
@@ -33,7 +33,7 @@
             android:background="@drawable/bg_card"
             android:gravity="center"
             android:text=""
-            android:textColor="@color/text_primary"
+            android:textColor="@color/background"
             android:textSize="18sp"
             android:layout_marginBottom="8dp" />
 
@@ -43,7 +43,7 @@
             android:background="@drawable/bg_card"
             android:gravity="center"
             android:text=""
-            android:textColor="@color/text_primary"
+            android:textColor="@color/background"
             android:textSize="18sp"
             android:layout_marginBottom="8dp" />
 
@@ -53,7 +53,7 @@
             android:background="@drawable/bg_card"
             android:gravity="center"
             android:text=""
-            android:textColor="@color/text_primary"
+            android:textColor="@color/background"
             android:textSize="18sp"
             android:layout_marginBottom="8dp" />
 
@@ -63,7 +63,7 @@
             android:background="@drawable/bg_card"
             android:gravity="center"
             android:text=""
-            android:textColor="@color/text_primary"
+            android:textColor="@color/background"
             android:textSize="18sp"
             android:layout_marginBottom="8dp" />
 
@@ -73,7 +73,7 @@
             android:background="@drawable/bg_card"
             android:gravity="center"
             android:text=""
-            android:textColor="@color/text_primary"
+            android:textColor="@color/background"
             android:textSize="18sp"
             android:layout_marginBottom="8dp" />
 
@@ -83,7 +83,7 @@
             android:background="@drawable/bg_card"
             android:gravity="center"
             android:text=""
-            android:textColor="@color/text_primary"
+            android:textColor="@color/background"
             android:textSize="18sp" />
     </LinearLayout>
 

@@ -175,7 +175,7 @@ public class NumberGameFragment extends Fragment {
 
         sharedViewModel.addCurrentPlayerPoints(points);
 
-        Toast.makeText(getContext(), "Result: " + resLong + " | Points: " + points, Toast.LENGTH_LONG).show();
+        Toast.makeText(getContext(), getString(R.string.game_result_toast, resLong, points), Toast.LENGTH_LONG).show();
         sharedViewModel.advanceGamePhase();
     }
 }
