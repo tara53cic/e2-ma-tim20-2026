@@ -1,3 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Slagalica</string>
+    <string name="main_page_title">SLAGALICA</string>
+    <string name="register">Registruj se</string>
+    <string name="log_in">Uloguj se</string>
+    <string name="play_as_guest">Igraj kao gost</string>
+
+    <string name="login_title">PRIJAVA</string>
+    <string name="email_or_username">Email ili korisničko ime</string>
+    <string name="password">Lozinka</string>
+    <string name="forgot_password">Zaboravili ste lozinku?</string>
+    <string name="no_account_register">Nemaš nalog? Registruj se</string>
+
+    <string name="register_title">REGISTRACIJA</string>
+    <string name="email">Email</string>
+    <string name="username">Korisničko ime</string>
+    <string name="region">Region</string>
+    <string name="repeat_password">Potvrdi lozinku</string>
+    <string name="already_have_account">Imaš nalog? Uloguj se</string>
+    <string name="register_toast_message">Potvrdite registraciju preko mejla pre logovanja.</string>
+
+    <string name="nav_play">Igraj</string>
+    <string name="nav_profile">Profil</string>
+    <string name="nav_statistics">Statistika</string>
+    <string name="nav_friends">Prijatelji</string>
+    <string name="start_game">ZAPOČNI PARTIJU</string>
+    <string name="tokens">100</string>
+    <string name="stars">50</string>
+    <string name="league">Srebrna</string>
+
+    <string name="reset_password_title">PROMENA LOZINKE</string>
+    <string name="old_password">Stara lozinka</string>
+    <string name="new_password">Nova lozinka</string>
+    <string name="repeat_new_password">Potvrdi novu lozinku</string>
+    <string name="confirm_change">Potvrdi promenu</string>
+
+    <string name="player_guest">Gost</string>
+    <string name="points_0">0</string>
+    <string name="timer_60">60</string>
+    <string name="enter_answer">Unesite pojam</string>
+    <string name="stop">STOP</string>
+    <string name="calc_screen_hint"></string>
+    <string name="target_number">123</string>
+
+    <string name="game_over">KRAJ PARTIJE</string>
+    <string name="loading_results">Učitavanje rezultata...</string>
+    <string name="plus_zero">+0</string>
+    <string name="return_to_home">POVRATAK NA POČETNI EKRAN</string>
+
+    <string name="error_all_fields_required">Sva polja moraju biti popunjena.</string>
+    <string name="error_passwords_dont_match">Lozinke se ne poklapaju.</string>
+    <string name="error_saving_data">Greška pri čuvanju podataka: %1$s</string>
+    <string name="error_registration">Greška pri registraciji: %1$s</string>
+    <string name="error_enter_credentials">Unesite email/korisničko ime i lozinku.</string>
+    <string name="error_user_not_found">Korisnik nije pronađen.</string>
+    <string name="error_username_not_found">Korisnik sa ovim korisničkim imenom ne postoji.</string>
+    <string name="error_search_user">Greška pri pretrazi korisnika.</string>
+    <string name="error_verify_email">Morate verifikovati email pre prijavljivanja.</string>
+    <string name="error_login_failed">Pogrešni kredencijali ili greška pri prijavi.</string>
+    <string name="error_new_passwords_dont_match">Nove lozinke se ne poklapaju.</string>
+    <string name="error_user_not_logged_in">Korisnik nije ulogovan.</string>
+    <string name="error_update_password">Greška pri promeni lozinke: %1$s</string>
+    <string name="error_invalid_old_password">Neispravna stara lozinka.</string>
+
+    <string name="game_result_toast">Result: %1$d | Points: %2$d</string>
+    <string name="error_loading_data">Nije moguće učitati podatke!</string>
+    <string name="opponent_correct_answer">Protivnik je tačno odgovorio! (%1$d bodova)</string>
+    <string name="correct_answer_points">Tačno! Osvojeno bodova: %1$d</string>
+    <string name="incorrect_answer">Netačno!</string>
+    <string name="time_expired_opponent_turn">Vreme je isteklo. Protivnik ima 10s za odgovor!</string>
+
+    <string name="change_password">Promeni lozinku</string>
+    <string name="logout">Odjavi se</string>
 </resources>

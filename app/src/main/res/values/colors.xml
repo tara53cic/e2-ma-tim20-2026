@@ -4,26 +4,26 @@
     <color name="white">#FFFFFFFF</color>
 
 
-    <color name="primary">#2F5DFF</color>
-    <color name="primary_dark">#1C3FCC</color>
-    <color name="primary_light">#6F8CFF</color>
+    <color name="primary">#F6F8FF</color>
+    <color name="primary_dark">#EEF2FF</color>
+    <color name="primary_light">#FFFFFF</color>
 
-    <color name="secondary">#FFB703</color>
-    <color name="secondary_dark">#CC9202</color>
-    <color name="secondary_light">#FFD166</color>
+    <color name="secondary">#508efa</color>
+    <color name="secondary_dark">#2a5fbd</color>
+    <color name="secondary_light">#77a8fc</color>
 
-    <color name="background">#F6F8FF</color>
+    <color name="background">#1C3D62</color>
     <color name="surface">#FFFFFF</color>
     <color name="surface_variant">#EEF2FF</color>
 
-    <color name="text_primary">#1A1A1A</color>
-    <color name="text_secondary">#5A5A5A</color>
-    <color name="text_hint">#8A8A8A</color>
+    <color name="text_primary">#F6F8FF</color>
+    <color name="text_secondary">#EEF2FF</color>
+    <color name="text_hint">#DEEEF2FF</color>
 
     <color name="success">#2EC27E</color>
     <color name="error">#E53935</color>
     <color name="warning">#F4A261</color>
-    <color name="info">#3A86FF</color>
+    <color name="info">#F6F8FF</color>
 
     <color name="divider">#E0E6ED</color>
     <color name="shadow">#1A000000</color>
