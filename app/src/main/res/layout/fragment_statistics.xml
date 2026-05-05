@@ -1,0 +1,736 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Statistika"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp" />
+
+        <!-- OPŠTA STATISTIKA -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="20dp"
+                android:gravity="center_vertical">
+
+                <!-- Krug sa postotkom -->
+                <FrameLayout
+                    android:layout_width="90dp"
+                    android:layout_height="90dp"
+                    android:layout_marginEnd="20dp">
+
+                    <View
+                        android:layout_width="90dp"
+                        android:layout_height="90dp"
+                        android:background="@drawable/circle_bg" />
+
+                    <TextView
+                        android:id="@+id/tvWinPercent"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="0%"
+                        android:textColor="@color/text_primary"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                </FrameLayout>
+
+                <!-- Pobede i porazi -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Ukupno partija"
+                            android:textColor="@color/text_on_card"
+                            android:textSize="14sp" />
+                        <TextView
+                            android:id="@+id/tvTotalGames"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Pobede"
+                        android:textColor="@color/text_on_card"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="4dp" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
+                        <ProgressBar
+                            android:id="@+id/pbWinRate"
+                            style="@android:style/Widget.ProgressBar.Horizontal"
+                            android:layout_width="0dp"
+                            android:layout_height="12dp"
+                            android:layout_weight="1"
+                            android:progress="0"
+                            android:max="100"
+                            android:progressTint="@color/success"
+                            android:progressBackgroundTint="@color/divider"
+                            android:layout_marginEnd="10dp" />
+                        <TextView
+                            android:id="@+id/tvWinRate"
+                            android:layout_width="36dp"
+                            android:layout_height="wrap_content"
+                            android:text="0%"
+                            android:textColor="@color/success"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:gravity="end" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Porazi"
+                        android:textColor="@color/text_on_card"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="4dp" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        <ProgressBar
+                            android:id="@+id/pbLossRate"
+                            style="@android:style/Widget.ProgressBar.Horizontal"
+                            android:layout_width="0dp"
+                            android:layout_height="12dp"
+                            android:layout_weight="1"
+                            android:progress="0"
+                            android:max="100"
+                            android:progressTint="@color/error"
+                            android:progressBackgroundTint="@color/divider"
+                            android:layout_marginEnd="10dp" />
+                        <TextView
+                            android:id="@+id/tvLossRate"
+                            android:layout_width="36dp"
+                            android:layout_height="wrap_content"
+                            android:text="0%"
+                            android:textColor="@color/error"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:gravity="end" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- NASLOV SEKCIJE -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Statistika po igrama"
+            android:textColor="@color/text_primary"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp"
+            android:layout_marginTop="4dp" />
+
+        <!-- KO ZNA ZNA -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardKzz"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Ko zna zna"
+                    android:textColor="@color/secondary"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="16dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tačno odgovorenih"
+                    android:textColor="@color/text_on_card"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="6dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="14dp">
+                    <ProgressBar
+                        android:id="@+id/pbKzzCorrect"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp"
+                        android:layout_height="12dp"
+                        android:layout_weight="1"
+                        android:progress="0"
+                        android:max="100"
+                        android:progressTint="@color/success"
+                        android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="10dp" />
+                    <TextView
+                        android:id="@+id/tvKzzCorrect"
+                        android:layout_width="36dp"
+                        android:layout_height="wrap_content"
+                        android:text="0%"
+                        android:textColor="@color/success"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:gravity="end" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Netačno odgovorenih"
+                    android:textColor="@color/text_on_card"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="6dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <ProgressBar
+                        android:id="@+id/pbKzzIncorrect"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp"
+                        android:layout_height="12dp"
+                        android:layout_weight="1"
+                        android:progress="0"
+                        android:max="100"
+                        android:progressTint="@color/error"
+                        android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="10dp" />
+                    <TextView
+                        android:id="@+id/tvKzzIncorrect"
+                        android:layout_width="36dp"
+                        android:layout_height="wrap_content"
+                        android:text="0%"
+                        android:textColor="@color/error"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:gravity="end" />
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- SPOJNICE -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardSpojnice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Spojnice"
+                    android:textColor="@color/secondary"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="16dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Uspešno povezanih"
+                    android:textColor="@color/text_on_card"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="6dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="14dp">
+                    <ProgressBar
+                        android:id="@+id/pbSpojniceRate"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp"
+                        android:layout_height="12dp"
+                        android:layout_weight="1"
+                        android:progress="0"
+                        android:max="100"
+                        android:progressTint="@color/success"
+                        android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="10dp" />
+                    <TextView
+                        android:id="@+id/tvSpojniceRate"
+                        android:layout_width="36dp"
+                        android:layout_height="wrap_content"
+                        android:text="0%"
+                        android:textColor="@color/success"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:gravity="end" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Neuspešno"
+                    android:textColor="@color/text_on_card"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="6dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <ProgressBar
+                        android:id="@+id/pbSpojniceFail"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp"
+                        android:layout_height="12dp"
+                        android:layout_weight="1"
+                        android:progress="0"
+                        android:max="100"
+                        android:progressTint="@color/error"
+                        android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="10dp" />
+                    <TextView
+                        android:id="@+id/tvSpojniceFail"
+                        android:layout_width="36dp"
+                        android:layout_height="wrap_content"
+                        android:text="0%"
+                        android:textColor="@color/error"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:gravity="end" />
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- ASOCIJACIJE -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Asocijacije"
+                    android:textColor="@color/secondary"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="16dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Rešenih"
+                    android:textColor="@color/text_on_card"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="6dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="14dp">
+                    <ProgressBar
+                        android:id="@+id/pbAsocijacijeSolved"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp"
+                        android:layout_height="12dp"
+                        android:layout_weight="1"
+                        android:progress="0"
+                        android:max="100"
+                        android:progressTint="@color/success"
+                        android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="10dp" />
+                    <TextView
+                        android:id="@+id/tvAsocijacijeSolved"
+                        android:layout_width="36dp"
+                        android:layout_height="wrap_content"
+                        android:text="0%"
+                        android:textColor="@color/success"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:gravity="end" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Nerešenih"
+                    android:textColor="@color/text_on_card"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="6dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <ProgressBar
+                        android:id="@+id/pbAsocijacijeUnsolved"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp"
+                        android:layout_height="12dp"
+                        android:layout_weight="1"
+                        android:progress="0"
+                        android:max="100"
+                        android:progressTint="@color/error"
+                        android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="10dp" />
+                    <TextView
+                        android:id="@+id/tvAsocijacijeUnsolved"
+                        android:layout_width="36dp"
+                        android:layout_height="wrap_content"
+                        android:text="0%"
+                        android:textColor="@color/error"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:gravity="end" />
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- SKOČKO -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Skočko"
+                    android:textColor="@color/secondary"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="16dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pogođenih"
+                    android:textColor="@color/text_on_card"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="6dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="14dp">
+                    <ProgressBar
+                        android:id="@+id/pbSkockoRate"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp"
+                        android:layout_height="12dp"
+                        android:layout_weight="1"
+                        android:progress="0"
+                        android:max="100"
+                        android:progressTint="@color/success"
+                        android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="10dp" />
+                    <TextView
+                        android:id="@+id/tvSkockoRate"
+                        android:layout_width="36dp"
+                        android:layout_height="wrap_content"
+                        android:text="0%"
+                        android:textColor="@color/success"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:gravity="end" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Nepogođenih"
+                    android:textColor="@color/text_on_card"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="6dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <ProgressBar
+                        android:id="@+id/pbSkockoFail"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp"
+                        android:layout_height="12dp"
+                        android:layout_weight="1"
+                        android:progress="0"
+                        android:max="100"
+                        android:progressTint="@color/error"
+                        android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="10dp" />
+                    <TextView
+                        android:id="@+id/tvSkockoFail"
+                        android:layout_width="36dp"
+                        android:layout_height="wrap_content"
+                        android:text="0%"
+                        android:textColor="@color/error"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:gravity="end" />
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- KORAK PO KORAK -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Korak po korak"
+                    android:textColor="@color/secondary"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="16dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pogođeno"
+                    android:textColor="@color/text_on_card"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="6dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="14dp">
+                    <ProgressBar
+                        android:id="@+id/pbKpkRate"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp"
+                        android:layout_height="12dp"
+                        android:layout_weight="1"
+                        android:progress="0"
+                        android:max="100"
+                        android:progressTint="@color/success"
+                        android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="10dp" />
+                    <TextView
+                        android:id="@+id/tvKpkRate"
+                        android:layout_width="36dp"
+                        android:layout_height="wrap_content"
+                        android:text="0%"
+                        android:textColor="@color/success"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:gravity="end" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Nije pogođeno"
+                    android:textColor="@color/text_on_card"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="6dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <ProgressBar
+                        android:id="@+id/pbKpkFail"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp"
+                        android:layout_height="12dp"
+                        android:layout_weight="1"
+                        android:progress="0"
+                        android:max="100"
+                        android:progressTint="@color/error"
+                        android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="10dp" />
+                    <TextView
+                        android:id="@+id/tvKpkFail"
+                        android:layout_width="36dp"
+                        android:layout_height="wrap_content"
+                        android:text="0%"
+                        android:textColor="@color/error"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:gravity="end" />
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- MOJ BROJ -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Moj broj"
+                    android:textColor="@color/secondary"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="16dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tačan broj"
+                    android:textColor="@color/text_on_card"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="6dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="14dp">
+                    <ProgressBar
+                        android:id="@+id/pbMojBrojRate"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp"
+                        android:layout_height="12dp"
+                        android:layout_weight="1"
+                        android:progress="0"
+                        android:max="100"
+                        android:progressTint="@color/success"
+                        android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="10dp" />
+                    <TextView
+                        android:id="@+id/tvMojBrojRate"
+                        android:layout_width="36dp"
+                        android:layout_height="wrap_content"
+                        android:text="0%"
+                        android:textColor="@color/success"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:gravity="end" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Nije pronađen"
+                    android:textColor="@color/text_on_card"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="6dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <ProgressBar
+                        android:id="@+id/pbMojBrojFail"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp"
+                        android:layout_height="12dp"
+                        android:layout_weight="1"
+                        android:progress="0"
+                        android:max="100"
+                        android:progressTint="@color/error"
+                        android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="10dp" />
+                    <TextView
+                        android:id="@+id/tvMojBrojFail"
+                        android:layout_width="36dp"
+                        android:layout_height="wrap_content"
+                        android:text="0%"
+                        android:textColor="@color/error"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:gravity="end" />
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+    </LinearLayout>
+</ScrollView>

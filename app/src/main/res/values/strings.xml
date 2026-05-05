@@ -72,4 +72,50 @@
 
     <string name="change_password">Promeni lozinku</string>
     <string name="logout">Odjavi se</string>
+
+    <!-- Profil - osnovni podaci -->
+    <string name="username_placeholder">Korisničko ime</string>
+    <string name="email_placeholder">email@primer.com</string>
+    <string name="league_placeholder">Srebrna</string>
+    <string name="region_placeholder">Region</string>
+    <string name="league_label">Liga</string>
+    <string name="region_label">Region</string>
+    <string name="tokens_label">Tokeni</string>
+    <string name="stars_label">Zvezde</string>
+    <string name="avatar">Avatar</string>
+    <string name="edit_avatar">Izmeni avatar</string>
+    <string name="qr_code_label">QR kod za dodavanje prijatelja</string>
+
+    <!-- Profil - opšta statistika -->
+    <string name="stats_title">Statistika</string>
+    <string name="total_games">Ukupno odigranih partija</string>
+    <string name="wins_label">Pobede</string>
+    <string name="losses_label">Porazi</string>
+
+    <!-- Profil - statistika po igrama -->
+    <string name="stats_per_game_title">Statistika po igrama</string>
+    <string name="game_kzz">Ko zna zna</string>
+    <string name="kzz_correct">Tačno odgovorenih pitanja</string>
+    <string name="kzz_incorrect">Netačno odgovorenih pitanja</string>
+    <string name="game_spojnice">Spojnice</string>
+    <string name="spojnice_stat">Uspešno povezanih pojmova</string>
+    <string name="game_asocijacije">Asocijacije</string>
+    <string name="asocijacije_solved">Rešenih asocijacija</string>
+    <string name="asocijacije_unsolved">Nerešenih asocijacija</string>
+    <string name="game_skocko">Skočko</string>
+    <string name="skocko_stat">Pogođenih kombinacija</string>
+    <string name="game_kpk">Korak po korak</string>
+    <string name="kpk_stat">Prosečan korak pogađanja</string>
+    <string name="game_moj_broj">Moj broj</string>
+    <string name="moj_broj_stat">Pronađenih tačnih brojeva</string>
+
+    <!-- Avatar picker -->
+    <string name="choose_avatar">Odaberi avatar</string>
+    <string name="current_avatar">Trenutni avatar</string>
+    <string name="select_avatar">Dostupni avatari</string>
+    <string name="confirm_avatar">Potvrdi odabir</string>
+    <string name="selected">Odabrano</string>
+    <string name="back">Nazad</string>
+    <string name="avatar_saved">Avatar uspešno sačuvan!</string>
+    <string name="avatar_save_error">Greška pri čuvanju avatara.</string>
 </resources>
