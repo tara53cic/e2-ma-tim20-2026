@@ -45,7 +45,7 @@ public class TopBarFragment extends Fragment {
                         Long stars = value.getLong("stars");
                         Long leagueIndex = value.getLong("league");
 
-                        if (tokens != null) tvTokens.setText(String.valueOf(tokens));
+                        if (tokens != null) tvTokens.setText(String.valueOf(Math.max(0, tokens)));
                         if (stars != null) tvStars.setText(String.valueOf(stars));
 
                         if (leagueIndex != null) {
