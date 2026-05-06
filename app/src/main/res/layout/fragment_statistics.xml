@@ -193,7 +193,26 @@
                     android:textColor="@color/secondary"
                     android:textSize="16sp"
                     android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Prosečno bodova"
+                    android:textColor="@color/text_on_card"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/tvKzzAvg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 - 0"
+                    android:textColor="@color/secondary"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
                     android:layout_marginBottom="16dp" />
+
+
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -287,7 +306,26 @@
                     android:textColor="@color/secondary"
                     android:textSize="16sp"
                     android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Prosečno bodova"
+                    android:textColor="@color/text_on_card"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/tvSpojniceAvg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 - 0"
+                    android:textColor="@color/secondary"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
                     android:layout_marginBottom="16dp" />
+
+
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -380,7 +418,26 @@
                     android:textColor="@color/secondary"
                     android:textSize="16sp"
                     android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Prosečno bodova"
+                    android:textColor="@color/text_on_card"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/tvAsocijacijeAvg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 - 0"
+                    android:textColor="@color/secondary"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
                     android:layout_marginBottom="16dp" />
+
+
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -473,7 +530,26 @@
                     android:textColor="@color/secondary"
                     android:textSize="16sp"
                     android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Prosečno bodova"
+                    android:textColor="@color/text_on_card"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/tvSkockoAvg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 - 0"
+                    android:textColor="@color/secondary"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
                     android:layout_marginBottom="16dp" />
+
+
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -566,7 +642,26 @@
                     android:textColor="@color/secondary"
                     android:textSize="16sp"
                     android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Prosečno bodova"
+                    android:textColor="@color/text_on_card"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/tvKpkAvg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 - 0"
+                    android:textColor="@color/secondary"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
                     android:layout_marginBottom="16dp" />
+
+
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -659,7 +754,26 @@
                     android:textColor="@color/secondary"
                     android:textSize="16sp"
                     android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Prosečno bodova"
+                    android:textColor="@color/text_on_card"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/tvMojBrojAvg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 - 0"
+                    android:textColor="@color/secondary"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
                     android:layout_marginBottom="16dp" />
+
+
 
                 <TextView
                     android:layout_width="wrap_content"
