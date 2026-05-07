@@ -138,6 +138,14 @@ public class MatchViewModel extends ViewModel {
         } else if ("KORAK_PO_KORAK_R1".equals(current)) {
             currentFragment.setValue("KORAK_PO_KORAK_R2");
             startRoundTimer(70, this::advanceGamePhase);
+        } else if ("KORAK_PO_KORAK_R2".equals(current)) {
+            currentFragment.setValue("SPOJNICE_R1");
+        } else if ("SPOJNICE_R1".equals(current)) {
+            currentFragment.setValue("SPOJNICE_R2");
+        } else if ("SPOJNICE_R2".equals(current)) {
+            currentFragment.setValue("KZZ");
+        } else if ("KZZ".equals(current)) {
+            currentFragment.setValue("FINISHED");
         } else {
             currentFragment.setValue("FINISHED");
         }

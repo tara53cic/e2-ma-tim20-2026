@@ -11,6 +11,8 @@ import com.example.slagalica.data.UserRepository;
 import com.example.slagalica.ui.match.match_result.MatchResultFragment;
 import com.example.slagalica.ui.match.number_game.NumberGameFragment;
 import com.example.slagalica.ui.match.step_by_step.StepByStepFragment;
+import com.example.slagalica.ui.match.who_knows.WhoKnowsFragment;
+import com.example.slagalica.ui.match.matching.MatchingFragment;
 
 public class MatchActivity extends AppCompatActivity {
 
@@ -47,7 +49,11 @@ public class MatchActivity extends AppCompatActivity {
 
         matchViewModel.getCurrentFragment().observe(this, fragmentName -> {
             Fragment fragment;
-            if ("MOJ_BROJ_R1".equals(fragmentName) || "MOJ_BROJ_R2".equals(fragmentName)) {
+            if ("KZZ".equals(fragmentName)) {
+                fragment = new WhoKnowsFragment();
+            } else if ("SPOJNICE_R1".equals(fragmentName) || "SPOJNICE_R2".equals(fragmentName)) {
+                fragment = new MatchingFragment();
+            } else if ("MOJ_BROJ_R1".equals(fragmentName) || "MOJ_BROJ_R2".equals(fragmentName)) {
                 fragment = new NumberGameFragment();
             } else if (fragmentName.startsWith("KORAK_PO_KORAK")) {
                 fragment = new StepByStepFragment();
