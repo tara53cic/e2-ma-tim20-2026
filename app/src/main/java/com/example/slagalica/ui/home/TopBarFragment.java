@@ -45,7 +45,7 @@ public class TopBarFragment extends Fragment {
                         Long stars = value.getLong("stars");
                         Long leagueIndex = value.getLong("league");
 
-                        if (tokens != null) tvTokens.setText(String.valueOf(tokens));
+                        if (tokens != null) tvTokens.setText(String.valueOf(Math.max(0, tokens)));
                         if (stars != null) tvStars.setText(String.valueOf(stars));
 
                         if (leagueIndex != null) {
@@ -58,18 +58,13 @@ public class TopBarFragment extends Fragment {
 
     private String getLeagueName(int index) {
         switch (index) {
-            case 0:
-                return "Srebrna";
-            case 1:
-                return "Zlatna";
-            case 2:
-                return "Dijamantska";
-            case 3:
-                return "Platinum";
-            case 4:
-                return "Emerald";
-            default:
-                return "Srebrna";
+            case 0: return "Početna";
+            case 1: return "Bronzana";
+            case 2: return "Srebrna";
+            case 3: return "Zlatna";
+            case 4: return "Platinasta";
+            case 5: return "Dijamantska";
+            default: return "Početna";
         }
     }
 }

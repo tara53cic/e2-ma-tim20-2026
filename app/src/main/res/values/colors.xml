@@ -19,6 +19,7 @@
     <color name="text_primary">#F6F8FF</color>
     <color name="text_secondary">#EEF2FF</color>
     <color name="text_hint">#DEEEF2FF</color>
+    <color name="text_on_card">#1C2D3E</color>
 
     <color name="success">#2EC27E</color>
     <color name="error">#E53935</color>

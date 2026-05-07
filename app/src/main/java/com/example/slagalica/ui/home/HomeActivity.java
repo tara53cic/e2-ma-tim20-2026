@@ -15,16 +15,23 @@ public class HomeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_home);
 
         BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
+
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.nav_host_fragment, new PlayFragment())
+                .commitNow();
+
+        bottomNav.setSelectedItemId(R.id.nav_play);
+
         bottomNav.setOnItemSelectedListener(item -> {
             Fragment selectedFragment = null;
             int itemId = item.getItemId();
 
             if (itemId == R.id.nav_play) {
-               selectedFragment = new PlayFragment();
+                selectedFragment = new PlayFragment();
             } else if (itemId == R.id.nav_profile) {
                 selectedFragment = new ProfileFragment();
             } else if (itemId == R.id.nav_statistics) {
-                selectedFragment = new Fragment();
+                selectedFragment = new StatisticsFragment();
             } else if (itemId == R.id.nav_friends) {
                 selectedFragment = new Fragment();
             }
