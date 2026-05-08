@@ -143,6 +143,10 @@ public class MatchViewModel extends ViewModel {
         } else if ("SPOJNICE_R1".equals(current)) {
             currentFragment.setValue("SPOJNICE_R2");
         } else if ("SPOJNICE_R2".equals(current)) {
+            currentFragment.setValue("ASOCIJACIJE_R1");
+        } else if ("ASOCIJACIJE_R1".equals(current)) {
+            currentFragment.setValue("ASOCIJACIJE_R2");
+        } else if("ASOCIJACIJE_R2".equals(current)) {
             currentFragment.setValue("KZZ");
         } else if ("KZZ".equals(current)) {
             currentFragment.setValue("FINISHED");
