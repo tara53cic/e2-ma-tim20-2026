@@ -20,7 +20,7 @@ import com.example.slagalica.MainActivity;
 import com.example.slagalica.R;
 import com.example.slagalica.ui.auth.AuthViewModel;
 import com.example.slagalica.ui.profile.ProfileViewModel;
-import com.example.slagalica.ui.reset_password.ResetPasswordActivity;
+
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import android.graphics.Bitmap;
 import com.google.zxing.BarcodeFormat;
@@ -173,14 +173,14 @@ public class ProfileFragment extends Fragment {
         authViewModel.getLogoutSuccess().observe(getViewLifecycleOwner(), success -> {
             if (success != null && success) {
                 Toast.makeText(getContext(), "Uspešno ste se odjavili.", Toast.LENGTH_SHORT).show();
-                Intent intent = new Intent(getActivity(), MainActivity.class);
+                Intent intent = new Intent(getActivity(), com.example.slagalica.ui.auth.AuthActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(intent);
             }
         });
 
         tvChangePassword.setOnClickListener(v -> {
-            startActivity(new Intent(getActivity(), ResetPasswordActivity.class));
+            androidx.navigation.Navigation.findNavController(getView()).navigate(R.id.action_nav_profile_to_resetPasswordFragment);
         });
 
         btnLogout.setOnClickListener(v -> {
@@ -190,7 +190,7 @@ public class ProfileFragment extends Fragment {
         ivEditAvatar.setOnClickListener(v -> {
             requireActivity().getSupportFragmentManager()
                     .beginTransaction()
-                    .replace(R.id.nav_host_fragment, new AvatarPickerFragment())
+                    .replace(R.id.nav_host_fragment_main, new AvatarPickerFragment())
                     .addToBackStack(null)
                     .commit();
         });

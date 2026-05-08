@@ -60,7 +60,7 @@ public class MatchResultFragment extends Fragment {
         resultViewModel.calculateAndSaveStats(isPlayer1, p1Score, p2Score);
 
         btnHome.setOnClickListener(v -> {
-            requireActivity().finish();
+            androidx.navigation.Navigation.findNavController(v).navigate(R.id.nav_play);
         });
 
         // Update match status
