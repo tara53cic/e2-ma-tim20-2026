@@ -6,17 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background"
-    tools:context="com.example.slagalica.ui.match.MatchActivity">
-
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/topBarGame"
-        android:name="com.example.slagalica.ui.home.TopBarFragment"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+    tools:context=".ui.match.MatchFragment">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/scoreLayer"
@@ -24,7 +14,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:paddingHorizontal="16dp"
-        app:layout_constraintTop_toBottomOf="@id/topBarGame"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 

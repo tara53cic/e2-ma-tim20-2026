@@ -23,7 +23,7 @@
     <string name="nav_play">Igraj</string>
     <string name="nav_profile">Profil</string>
     <string name="nav_statistics">Statistika</string>
-    <string name="nav_friends">Prijatelji</string>
+
     <string name="start_game">ZAPOČNI PARTIJU</string>
     <string name="tokens">100</string>
     <string name="stars">50</string>
@@ -118,4 +118,5 @@
     <string name="back">Nazad</string>
     <string name="avatar_saved">Avatar uspešno sačuvan!</string>
     <string name="avatar_save_error">Greška pri čuvanju avatara.</string>
+    <string name="nav_friends">Prijatelji</string>
 </resources>

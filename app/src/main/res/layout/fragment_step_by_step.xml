@@ -3,89 +3,92 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:padding="16dp">
+    android:layout_height="match_parent">
 
-    <LinearLayout
-        android:id="@+id/stepsContainer"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center"
+        android:layout_height="0dp"
+        android:padding="16dp"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/inputContainer"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintBottom_toTopOf="@id/inputContainer">
 
-        <TextView
+        <LinearLayout
+            android:id="@+id/stepsContainer"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="@drawable/bg_card"
-            android:gravity="center"
-            android:text=""
-            android:textColor="@color/background"
-            android:textSize="18sp"
-            android:layout_marginBottom="8dp" />
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="@drawable/bg_card"
-            android:gravity="center"
-            android:text=""
-            android:textColor="@color/background"
-            android:textSize="18sp"
-            android:layout_marginBottom="8dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_card"
+                android:gravity="center"
+                android:text=""
+                android:textColor="@color/background"
+                android:textSize="18sp"
+                android:layout_marginBottom="8dp" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="@drawable/bg_card"
-            android:gravity="center"
-            android:text=""
-            android:textColor="@color/background"
-            android:textSize="18sp"
-            android:layout_marginBottom="8dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_card"
+                android:gravity="center"
+                android:text=""
+                android:textColor="@color/background"
+                android:textSize="18sp"
+                android:layout_marginBottom="8dp" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="@drawable/bg_card"
-            android:gravity="center"
-            android:text=""
-            android:textColor="@color/background"
-            android:textSize="18sp"
-            android:layout_marginBottom="8dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_card"
+                android:gravity="center"
+                android:text=""
+                android:textColor="@color/background"
+                android:textSize="18sp"
+                android:layout_marginBottom="8dp" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="@drawable/bg_card"
-            android:gravity="center"
-            android:text=""
-            android:textColor="@color/background"
-            android:textSize="18sp"
-            android:layout_marginBottom="8dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_card"
+                android:gravity="center"
+                android:text=""
+                android:textColor="@color/background"
+                android:textSize="18sp"
+                android:layout_marginBottom="8dp" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="@drawable/bg_card"
-            android:gravity="center"
-            android:text=""
-            android:textColor="@color/background"
-            android:textSize="18sp"
-            android:layout_marginBottom="8dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_card"
+                android:gravity="center"
+                android:text=""
+                android:textColor="@color/background"
+                android:textSize="18sp"
+                android:layout_marginBottom="8dp" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="@drawable/bg_card"
-            android:gravity="center"
-            android:text=""
-            android:textColor="@color/background"
-            android:textSize="18sp" />
-    </LinearLayout>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_card"
+                android:gravity="center"
+                android:text=""
+                android:textColor="@color/background"
+                android:textSize="18sp"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_card"
+                android:gravity="center"
+                android:text=""
+                android:textColor="@color/background"
+                android:textSize="18sp" />
+        </LinearLayout>
+    </ScrollView>
 
     <LinearLayout
         android:id="@+id/inputContainer"
@@ -93,7 +96,8 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="72dp"
+        android:padding="16dp"
+        android:layout_marginBottom="32dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -138,4 +142,3 @@
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
-

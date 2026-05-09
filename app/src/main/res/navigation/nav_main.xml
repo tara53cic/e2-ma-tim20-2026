@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_main"
+    app:startDestination="@id/nav_play">
+
+    <fragment
+        android:id="@+id/nav_play"
+        android:name="com.example.slagalica.ui.home.PlayFragment"
+        android:label="Play">
+        <action
+            android:id="@+id/action_playFragment_to_matchFragment"
+            app:destination="@id/matchFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_profile"
+        android:name="com.example.slagalica.ui.home.ProfileFragment"
+        android:label="Profile">
+        <action
+            android:id="@+id/action_nav_profile_to_resetPasswordFragment"
+            app:destination="@id/resetPasswordFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_statistics"
+        android:name="com.example.slagalica.ui.home.StatisticsFragment"
+        android:label="Statistics" />
+
+
+
+    <fragment
+        android:id="@+id/matchFragment"
+        android:name="com.example.slagalica.ui.match.MatchFragment"
+        android:label="Match" />
+
+    <fragment
+        android:id="@+id/resetPasswordFragment"
+        android:name="com.example.slagalica.ui.reset_password.ResetPasswordFragment"
+        android:label="Reset Password" />
+
+</navigation>

@@ -14,7 +14,7 @@ import androidx.fragment.app.Fragment;
 import com.example.slagalica.R;
 import com.example.slagalica.data.MatchRepository;
 import com.example.slagalica.domain.models.Match;
-import com.example.slagalica.ui.match.MatchActivity;
+import com.example.slagalica.ui.match.MatchFragment;
 import android.widget.Toast;
 
 public class PlayFragment extends Fragment {
@@ -50,9 +50,9 @@ public class PlayFragment extends Fragment {
             matchRepository.createMatch(newMatch).addOnCompleteListener(task -> {
                 btnStartGame.setEnabled(true);
                 if (task.isSuccessful()) {
-                    Intent intent = new Intent(getActivity(), MatchActivity.class);
-                    intent.putExtra("MATCH_ID", newMatch.getId());
-                    startActivity(intent);
+                    Bundle args = new Bundle();
+                    args.putString("MATCH_ID", newMatch.getId());
+                    androidx.navigation.Navigation.findNavController(view).navigate(R.id.action_playFragment_to_matchFragment, args);
                 } else {
                     Toast.makeText(getContext(), "Failed to create match", Toast.LENGTH_SHORT).show();
                 }
