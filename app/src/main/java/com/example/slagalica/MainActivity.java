@@ -33,6 +33,11 @@ public class MainActivity extends AppCompatActivity {
             NavController navController = navHostFragment.getNavController();
             NavigationUI.setupWithNavController(navView, navController);
 
+            String navigateTo = getIntent().getStringExtra("NAVIGATE_TO");
+            if ("MATCH".equals(navigateTo)) {
+                navController.navigate(R.id.matchFragment);
+            }
+
             navView.setOnItemSelectedListener(item -> {
                 if (navController.getCurrentDestination() != null && 
                     item.getItemId() != navController.getCurrentDestination().getId()) {

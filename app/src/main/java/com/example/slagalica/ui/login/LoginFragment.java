@@ -65,7 +65,7 @@ public class LoginFragment extends Fragment {
             authViewModel.login(emailOrUsername, password);
         });
 
-        if(btnGoToRegister != null) {
+        if (btnGoToRegister != null) {
             btnGoToRegister.setOnClickListener(v -> {
                 Navigation.findNavController(v).navigate(R.id.action_loginFragment_to_registerFragment);
             });
