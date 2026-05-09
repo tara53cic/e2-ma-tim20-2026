@@ -10,6 +10,7 @@ import com.example.slagalica.R;
 import com.example.slagalica.data.UserRepository;
 import com.example.slagalica.ui.match.match_result.MatchResultFragment;
 import com.example.slagalica.ui.match.number_game.NumberGameFragment;
+import com.example.slagalica.ui.match.skocko.SkockoFragment;
 import com.example.slagalica.ui.match.step_by_step.StepByStepFragment;
 import com.example.slagalica.ui.match.who_knows.WhoKnowsFragment;
 import com.example.slagalica.ui.match.matching.MatchingFragment;
@@ -56,6 +57,8 @@ public class MatchActivity extends AppCompatActivity {
                 fragment = new MatchingFragment();
             } else if ("ASOCIJACIJE_R1".equals(fragmentName) || "ASOCIJACIJE_R2".equals(fragmentName)) {
                 fragment = new AssociationsFragment();
+            } else if ("SKOCKO_R1".equals(fragmentName) || "SKOCKO_R2".equals(fragmentName)) {
+                fragment = new SkockoFragment();
             } else if ("MOJ_BROJ_R1".equals(fragmentName) || "MOJ_BROJ_R2".equals(fragmentName)) {
                 fragment = new NumberGameFragment();
             } else if (fragmentName.startsWith("KORAK_PO_KORAK")) {
