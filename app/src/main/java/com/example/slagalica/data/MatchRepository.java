@@ -5,6 +5,7 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QuerySnapshot;
 
 public class MatchRepository {
 
@@ -37,6 +38,18 @@ public class MatchRepository {
 
     public Task<Void> updateMatchStatus(String matchId, String status) {
         return db.collection("matches").document(matchId).update("status", status);
+    }
+
+    public Task<QuerySnapshot> findAvailableMatch() {
+        return db.collection("matches")
+                .whereEqualTo("status", "WAITING")
+                .limit(10)
+                .get();
+    }
+
+    public Task<Void> joinMatch(String matchId, String player2Id) {
+        return db.collection("matches").document(matchId)
+                .update("player2_id", player2Id, "status", "IN_PROGRESS");
     }
 
     public String getCurrentUserId() {

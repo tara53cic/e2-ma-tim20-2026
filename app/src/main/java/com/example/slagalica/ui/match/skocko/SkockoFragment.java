@@ -18,88 +18,338 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.slagalica.R;
+import com.example.slagalica.data.GameStateRepository;
 import com.example.slagalica.ui.match.MatchViewModel;
+import com.google.firebase.firestore.ListenerRegistration;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class SkockoFragment extends Fragment {
+
     private SkockoViewModel viewModel;
+    private MatchViewModel sharedViewModel;
+    private GameStateRepository gameStateRepo;
+    private ListenerRegistration gameListener;
+
+    private String matchId, gameKey;
+    private boolean isGuesser;
+    private boolean localRoundDone = false;
+
+    private final String[] challengerInput = new String[4];
+    private int challengerInputIdx = 0;
+    private boolean challengerPhaseActive = false;
+
     private TextView tvRoundInfo;
     private TextView[][] cells;
     private TextView[][] results;
     private TextView[] opponentCells;
     private TextView[] opponentResults;
-    private Button btnSkocko, btnClub, btnSpade, btnHeart, btnTriangle, btnStar;
-    private Button btnConfirm;
-    private MatchViewModel sharedViewModel;
+    private Button btnSkocko, btnClub, btnSpade, btnHeart, btnTriangle, btnStar, btnConfirm;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
 
-    private static final int COLOR_CELL = Color.parseColor("#0F3356");
-    private static final int COLOR_PLAYER_RESULT = Color.parseColor("#F4A261");
     private static final int COLOR_CORRECT_PLACE = Color.parseColor("#2EC27E");
-    private static final int COLOR_WRONG_PLACE = Color.parseColor("#F4A261");
-    private static final int COLOR_EMPTY_RESULT = Color.parseColor("#020617");
-    private static final int COLOR_OPPONENT = Color.parseColor("#7C2D12");
+    private static final int COLOR_WRONG_PLACE   = Color.parseColor("#F4A261");
+    private static final int COLOR_EMPTY_RESULT  = Color.parseColor("#020617");
+    private static final int COLOR_CHALLENGER    = Color.parseColor("#508EFA");
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater,
-                             @Nullable ViewGroup container,
-                             @Nullable Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_skocko, container, false);
     }
 
     @Override
-    public void onViewCreated(@NonNull View view,
-                              @Nullable Bundle savedInstanceState) {
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
         viewModel = new ViewModelProvider(this).get(SkockoViewModel.class);
         sharedViewModel = new ViewModelProvider(requireActivity()).get(MatchViewModel.class);
+        gameStateRepo = new GameStateRepository();
+
+        matchId = sharedViewModel.getMatchId();
+        String phase = sharedViewModel.getCurrentFragment().getValue();
+        gameKey = "SKOCKO_R1".equals(phase) ? "skocko_r1" : "skocko_r2";
+        isGuesser = "skocko_r1".equals(gameKey)
+                ? sharedViewModel.getIsPlayer1()
+                : !sharedViewModel.getIsPlayer1();
 
         connectViews(view);
         setupCellClicks();
         setupSymbolButtons();
-        setupConfirmButton();
+        btnConfirm.setOnClickListener(v -> onConfirmClicked());
 
-        tvRoundInfo.setText("Tvoja partija - 6 pokušaja");
-        startPlayerTimer();
+        if (matchId != null && isGuesser) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("secretCombination", Arrays.asList(viewModel.secretCombination));
+            data.put("playerTurnDone", false);
+            data.put("playerSolved", false);
+            data.put("roundFinished", false);
+            gameStateRepo.set(matchId, gameKey, data);
+        }
+
+        listenToGameState();
+
+        if (isGuesser) {
+            tvRoundInfo.setText("Tvoja partija – 6 pokušaja");
+            sharedViewModel.startRoundTimer(30, this::onGuesserTimerUp);
+        } else {
+            tvRoundInfo.setText("Protivnik igra – čeka se...");
+            disableButtons();
+            sharedViewModel.startRoundTimer(30, () -> {});
+        }
+    }
+
+
+    private void listenToGameState() {
+        if (matchId == null) return;
+        gameListener = gameStateRepo.listen(matchId, gameKey, (snapshot, e) -> {
+            if (e != null || snapshot == null || !snapshot.exists()) return;
+
+            List<String> secret = (List<String>) snapshot.get("secretCombination");
+            if (secret != null && secret.size() == 4) {
+                for (int i = 0; i < 4; i++) viewModel.secretCombination[i] = secret.get(i);
+            }
+
+            for (int row = 0; row < 6; row++) {
+                List<String> attempt = (List<String>) snapshot.get("attempt_" + row);
+                List<Long>   result  = (List<Long>)   snapshot.get("result_" + row);
+                if (attempt != null && result != null) {
+                    for (int c = 0; c < 4; c++) {
+                        cells[row][c].setText(attempt.get(c));
+                        cells[row][c].setTextColor(Color.WHITE);
+                        cells[row][c].setGravity(android.view.Gravity.CENTER);
+                    }
+                    showResult(results[row], new int[]{result.get(0).intValue(), result.get(1).intValue()});
+                }
+            }
+
+            Boolean turnDone = snapshot.getBoolean("playerTurnDone");
+            Boolean solved   = snapshot.getBoolean("playerSolved");
+            if (Boolean.TRUE.equals(turnDone) && !Boolean.TRUE.equals(solved)
+                    && !isGuesser && !challengerPhaseActive && !localRoundDone) {
+                startChallengerPhase();
+            }
+
+            List<String> cGuess  = (List<String>) snapshot.get("challengerGuess");
+            List<Long>   cResult = (List<Long>)   snapshot.get("challengerResult");
+            if (cGuess != null && cResult != null && isGuesser && !localRoundDone) {
+                showChallengerAttemptUI(cGuess, new int[]{cResult.get(0).intValue(), cResult.get(1).intValue()});
+            }
+
+            Boolean finished = snapshot.getBoolean("roundFinished");
+            if (Boolean.TRUE.equals(finished) && !localRoundDone) {
+                localRoundDone = true;
+                stopTimer();
+                disableButtons();
+                handler.postDelayed(() -> {
+                    if (isAdded()) sharedViewModel.advanceGamePhase();
+                }, 1500);
+            }
+        });
+    }
+
+
+    private void onGuesserTimerUp() {
+        if (localRoundDone || !isGuesser) return;
+        viewModel.playerTurnFinished = true;
+        disableButtons();
+        tvRoundInfo.setText("Vreme isteklo! Protivnik ima 10 sekundi.");
+        writeGuesserTurnDone(false);
+    }
+
+    private void onConfirmClicked() {
+        if (challengerPhaseActive) {
+            confirmChallengerAttempt();
+        } else if (isGuesser) {
+            confirmGuesserAttempt();
+        }
+    }
+
+    private void confirmGuesserAttempt() {
+        if (viewModel.playerTurnFinished || viewModel.roundFinished || localRoundDone) return;
+        if (!viewModel.isInputFull()) {
+            Toast.makeText(requireContext(), "Unesi 4 znaka.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int[] result = viewModel.checkCurrentInput();
+        int row = viewModel.currentAttempt;
+        showResult(results[row], result);
+
+        if (matchId != null) {
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("attempt_" + row, Arrays.asList(viewModel.currentInput.clone()));
+            updates.put("result_" + row, Arrays.asList(result[0], result[1]));
+            gameStateRepo.update(matchId, gameKey, updates);
+        }
+
+        if (viewModel.isSolved(result)) {
+            int points = viewModel.calculatePlayerPoints();
+            tvRoundInfo.setText("Pogodio/la si! +" + points + " bodova");
+            disableButtons();
+            stopTimer();
+            sharedViewModel.addCurrentPlayerPoints(points);
+            if (matchId != null) {
+                Map<String, Object> updates = new HashMap<>();
+                updates.put("playerTurnDone", true);
+                updates.put("playerSolved", true);
+                updates.put("playerPoints", points);
+                updates.put("roundFinished", true);
+                gameStateRepo.update(matchId, gameKey, updates);
+            }
+            return;
+        }
+
+        viewModel.currentAttempt++;
+        viewModel.clearInput();
+
+        if (viewModel.currentAttempt >= 6) {
+            viewModel.playerTurnFinished = true;
+            disableButtons();
+            stopTimer();
+            tvRoundInfo.setText("Nisi pogodio/la. Protivnik ima 10 sekundi.");
+            writeGuesserTurnDone(false);
+        }
+    }
+
+    private void writeGuesserTurnDone(boolean solved) {
+        if (matchId == null) return;
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("playerTurnDone", true);
+        updates.put("playerSolved", solved);
+        gameStateRepo.update(matchId, gameKey, updates);
+    }
+
+
+    private void startChallengerPhase() {
+        challengerPhaseActive = true;
+        tvRoundInfo.setText("Tvoj pokušaj – 10 sekundi!");
+        enableButtons();
+        for (int i = 0; i < 4; i++) {
+            opponentCells[i].setText("");
+            opponentCells[i].setBackgroundTintList(ColorStateList.valueOf(COLOR_CHALLENGER));
+        }
+        sharedViewModel.startRoundTimer(10, this::onChallengerTimerUp);
+    }
+
+    private void onChallengerTimerUp() {
+        if (localRoundDone || !challengerPhaseActive) return;
+        challengerPhaseActive = false;
+        disableButtons();
+        tvRoundInfo.setText("Vreme isteklo! Niko nije pogodio kombinaciju.");
+        if (matchId != null) {
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("challengerPoints", 0);
+            updates.put("roundFinished", true);
+            gameStateRepo.update(matchId, gameKey, updates);
+        }
+    }
+
+    private void confirmChallengerAttempt() {
+        if (challengerInputIdx < 4) {
+            Toast.makeText(requireContext(), "Unesi 4 znaka.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int[] result = viewModel.checkCombination(challengerInput);
+        showResult(opponentResults, result);
+
+        boolean solved = viewModel.isSolved(result);
+        int points = solved ? 10 : 0;
+
+        challengerPhaseActive = false;
+        disableButtons();
+        stopTimer();
+
+        if (solved) {
+            tvRoundInfo.setText("Pogodio/la si! +10 bodova");
+            sharedViewModel.addCurrentPlayerPoints(10);
+        } else {
+            tvRoundInfo.setText("Nije tačno. Niko nije pogodio kombinaciju.");
+        }
+
+        if (matchId != null) {
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("challengerGuess",  Arrays.asList(challengerInput.clone()));
+            updates.put("challengerResult", Arrays.asList(result[0], result[1]));
+            updates.put("challengerPoints", points);
+            updates.put("roundFinished", true);
+            gameStateRepo.update(matchId, gameKey, updates);
+        }
+    }
+
+
+    private void addSymbol(String symbol) {
+        if (localRoundDone) return;
+        if (challengerPhaseActive) {
+            if (challengerInputIdx >= 4) return;
+            challengerInput[challengerInputIdx] = symbol;
+            opponentCells[challengerInputIdx].setText(symbol);
+            opponentCells[challengerInputIdx].setTextColor(Color.WHITE);
+            opponentCells[challengerInputIdx].setGravity(android.view.Gravity.CENTER);
+            challengerInputIdx++;
+        } else if (isGuesser && !viewModel.playerTurnFinished && !viewModel.roundFinished) {
+            boolean added = viewModel.addSymbol(symbol);
+            if (!added) return;
+            int row = viewModel.currentAttempt;
+            int col = viewModel.currentInputIndex - 1;
+            cells[row][col].setText(symbol);
+            cells[row][col].setTextColor(Color.WHITE);
+            cells[row][col].setGravity(android.view.Gravity.CENTER);
+        }
+    }
+
+
+    private void showChallengerAttemptUI(List<String> guess, int[] result) {
+        for (int i = 0; i < 4; i++) {
+            opponentCells[i].setText(guess.get(i));
+            opponentCells[i].setTextColor(Color.WHITE);
+            opponentCells[i].setGravity(android.view.Gravity.CENTER);
+            opponentCells[i].setBackgroundTintList(ColorStateList.valueOf(COLOR_CHALLENGER));
+        }
+        showResult(opponentResults, result);
+        boolean solved = result[0] == 4;
+        tvRoundInfo.setText(solved ? "Protivnik je pogodio! +10 bodova" : "Protivnik nije pogodio. Niko nije pogodio.");
+    }
+
+    private void showResult(TextView[] views, int[] result) {
+        int idx = 0;
+        for (int i = 0; i < result[0]; i++)
+            views[idx++].setBackgroundTintList(ColorStateList.valueOf(COLOR_CORRECT_PLACE));
+        for (int i = 0; i < result[1]; i++)
+            views[idx++].setBackgroundTintList(ColorStateList.valueOf(COLOR_WRONG_PLACE));
+        while (idx < 4)
+            views[idx++].setBackgroundTintList(ColorStateList.valueOf(COLOR_EMPTY_RESULT));
     }
 
     private void setupCellClicks() {
         for (int row = 0; row < 6; row++) {
             for (int col = 0; col < 4; col++) {
-                final int r = row;
-                final int c = col;
-
+                final int r = row, c = col;
                 cells[r][c].setOnClickListener(v -> {
-                    if (r == viewModel.currentAttempt && !viewModel.playerTurnFinished && !viewModel.roundFinished) {
-                        removeSymbolFromCurrentAttempt(c);
-                    }
+                    if (!isGuesser || challengerPhaseActive || viewModel.playerTurnFinished || localRoundDone) return;
+                    if (r == viewModel.currentAttempt) removeSymbolAt(c);
                 });
             }
         }
     }
 
-    private void removeSymbolFromCurrentAttempt(int index) {
-        if (index >= viewModel.currentInputIndex) return;
-
-        boolean removed = viewModel.removeSymbolAt(index);
+    private void removeSymbolAt(int col) {
+        if (col >= viewModel.currentInputIndex) return;
+        boolean removed = viewModel.removeSymbolAt(col);
         if (!removed) return;
-
         int row = viewModel.currentAttempt;
-
-        for (int col = 0; col < 4; col++) {
-            cells[row][col].setText("");
-
-            if (col < viewModel.currentInputIndex) {
-                cells[row][col].setText(viewModel.currentInput[col]);
-            }
+        for (int c = 0; c < 4; c++) {
+            cells[row][c].setText(c < viewModel.currentInputIndex ? viewModel.currentInput[c] : "");
         }
     }
 
     private void connectViews(View view) {
         tvRoundInfo = view.findViewById(R.id.tvRoundInfo);
-
         cells = new TextView[][]{
                 {view.findViewById(R.id.cell00), view.findViewById(R.id.cell01), view.findViewById(R.id.cell02), view.findViewById(R.id.cell03)},
                 {view.findViewById(R.id.cell10), view.findViewById(R.id.cell11), view.findViewById(R.id.cell12), view.findViewById(R.id.cell13)},
@@ -108,7 +358,6 @@ public class SkockoFragment extends Fragment {
                 {view.findViewById(R.id.cell40), view.findViewById(R.id.cell41), view.findViewById(R.id.cell42), view.findViewById(R.id.cell43)},
                 {view.findViewById(R.id.cell50), view.findViewById(R.id.cell51), view.findViewById(R.id.cell52), view.findViewById(R.id.cell53)}
         };
-
         results = new TextView[][]{
                 {view.findViewById(R.id.res00), view.findViewById(R.id.res01), view.findViewById(R.id.res02), view.findViewById(R.id.res03)},
                 {view.findViewById(R.id.res10), view.findViewById(R.id.res11), view.findViewById(R.id.res12), view.findViewById(R.id.res13)},
@@ -117,28 +366,21 @@ public class SkockoFragment extends Fragment {
                 {view.findViewById(R.id.res40), view.findViewById(R.id.res41), view.findViewById(R.id.res42), view.findViewById(R.id.res43)},
                 {view.findViewById(R.id.res50), view.findViewById(R.id.res51), view.findViewById(R.id.res52), view.findViewById(R.id.res53)}
         };
-
         opponentCells = new TextView[]{
-                view.findViewById(R.id.opCell0),
-                view.findViewById(R.id.opCell1),
-                view.findViewById(R.id.opCell2),
-                view.findViewById(R.id.opCell3)
+                view.findViewById(R.id.opCell0), view.findViewById(R.id.opCell1),
+                view.findViewById(R.id.opCell2), view.findViewById(R.id.opCell3)
         };
-
         opponentResults = new TextView[]{
-                view.findViewById(R.id.opRes0),
-                view.findViewById(R.id.opRes1),
-                view.findViewById(R.id.opRes2),
-                view.findViewById(R.id.opRes3)
+                view.findViewById(R.id.opRes0), view.findViewById(R.id.opRes1),
+                view.findViewById(R.id.opRes2), view.findViewById(R.id.opRes3)
         };
-
-        btnSkocko = view.findViewById(R.id.btnSkocko);
-        btnClub = view.findViewById(R.id.btnClub);
-        btnSpade = view.findViewById(R.id.btnSpade);
-        btnHeart = view.findViewById(R.id.btnHeart);
+        btnSkocko   = view.findViewById(R.id.btnSkocko);
+        btnClub     = view.findViewById(R.id.btnClub);
+        btnSpade    = view.findViewById(R.id.btnSpade);
+        btnHeart    = view.findViewById(R.id.btnHeart);
         btnTriangle = view.findViewById(R.id.btnTriangle);
-        btnStar = view.findViewById(R.id.btnStar);
-        btnConfirm = view.findViewById(R.id.btnConfirm);
+        btnStar     = view.findViewById(R.id.btnStar);
+        btnConfirm  = view.findViewById(R.id.btnConfirm);
     }
 
     private void setupSymbolButtons() {
@@ -150,154 +392,27 @@ public class SkockoFragment extends Fragment {
         btnStar.setOnClickListener(v -> addSymbol("★"));
     }
 
-    private void setupConfirmButton() {
-        btnConfirm.setOnClickListener(v -> confirmPlayerAttempt());
-    }
-
-    private void addSymbol(String symbol) {
-        if (viewModel.playerTurnFinished || viewModel.roundFinished) return;
-
-        boolean added = viewModel.addSymbol(symbol);
-
-        if (!added) return;
-
-        int row = viewModel.currentAttempt;
-        int column = viewModel.currentInputIndex - 1;
-
-        cells[row][column].setText(symbol);
-        cells[row][column].setTextColor(Color.WHITE);
-        cells[row][column].setGravity(android.view.Gravity.CENTER);
-    }
-
-    private void confirmPlayerAttempt() {
-        if (viewModel.playerTurnFinished || viewModel.roundFinished) return;
-
-        if (!viewModel.isInputFull()) {
-            Toast.makeText(requireContext(), "Unesi 4 znaka.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        int[] result = viewModel.checkCurrentInput();
-        showResult(results[viewModel.currentAttempt], result);
-
-        if (viewModel.isSolved(result)) {
-            int points = viewModel.calculatePlayerPoints();
-            viewModel.playerScore += points;
-            viewModel.roundFinished = true;
-
-            stopTimer();
-            tvRoundInfo.setText("Pogodila si! +" + points + " bodova");
-
-            disableButtons();
-            finishSkockoRound();
-            return;
-        }
-
-        viewModel.currentAttempt++;
-        viewModel.clearInput();
-
-        if (viewModel.currentAttempt >= 6) {
-            startOpponentAttempt();
-        }
-    }
-
-    private void finishSkockoRound() {
-        stopTimer();
-
-        handler.postDelayed(() -> {
-            if (isAdded()) {
-                sharedViewModel.advanceGamePhase();
-            }
-        }, 1500);
-    }
-
-    private void startOpponentAttempt() {
-        viewModel.playerTurnFinished = true;
-
-        stopTimer();
-        disableButtons();
-
-        tvRoundInfo.setText("Sistem ima jedan pokušaj");
-
-        handler.postDelayed(() -> {
-            String[] systemGuess = viewModel.generateSystemGuess();
-
-            for (int i = 0; i < 4; i++) {
-                opponentCells[i].setText(systemGuess[i]);
-                opponentCells[i].setTextColor(Color.WHITE);
-                opponentCells[i].setTextSize(18);
-                opponentCells[i].setGravity(android.view.Gravity.CENTER);
-                opponentCells[i].setBackgroundTintList(ColorStateList.valueOf(COLOR_OPPONENT));
-            }
-
-            int[] result = viewModel.checkCombination(systemGuess);
-            showResult(opponentResults, result);
-
-            if (viewModel.isSolved(result)) {
-                viewModel.systemScore += 10;
-                tvRoundInfo.setText("Sistem je pogodio! Sistem +10");
-            } else {
-                tvRoundInfo.setText("Niko nije pogodio kombinaciju");
-            }
-
-            viewModel.opponentAttemptUsed = true;
-            viewModel.roundFinished = true;
-
-            finishSkockoRound();
-
-        }, 1000);
-    }
-
-    private void showResult(TextView[] resultViews, int[] result) {
-        int correctPlace = result[0];
-        int wrongPlace = result[1];
-
-        int index = 0;
-
-        for (int i = 0; i < correctPlace; i++) {
-            resultViews[index].setBackgroundTintList(ColorStateList.valueOf(COLOR_CORRECT_PLACE));
-            index++;
-        }
-
-        for (int i = 0; i < wrongPlace; i++) {
-            resultViews[index].setBackgroundTintList(ColorStateList.valueOf(COLOR_WRONG_PLACE));
-            index++;
-        }
-
-        while (index < 4) {
-            resultViews[index].setBackgroundTintList(ColorStateList.valueOf(COLOR_EMPTY_RESULT));
-            index++;
-        }
-    }
-
-    private void startPlayerTimer() {
-        sharedViewModel.startRoundTimer(30, () -> {
-            if (!viewModel.roundFinished) {
-                startOpponentAttempt();
-            }
-        });
-
-        tvRoundInfo.setText("Tvoja partija - 6 pokušaja");
-    }
-
-    private void stopTimer() {
-        sharedViewModel.stopTimer();
+    private void enableButtons() {
+        btnSkocko.setEnabled(true); btnClub.setEnabled(true);
+        btnSpade.setEnabled(true);  btnHeart.setEnabled(true);
+        btnTriangle.setEnabled(true); btnStar.setEnabled(true);
+        btnConfirm.setEnabled(true);
     }
 
     private void disableButtons() {
-        btnSkocko.setEnabled(false);
-        btnClub.setEnabled(false);
-        btnSpade.setEnabled(false);
-        btnHeart.setEnabled(false);
-        btnTriangle.setEnabled(false);
-        btnStar.setEnabled(false);
+        btnSkocko.setEnabled(false); btnClub.setEnabled(false);
+        btnSpade.setEnabled(false);  btnHeart.setEnabled(false);
+        btnTriangle.setEnabled(false); btnStar.setEnabled(false);
         btnConfirm.setEnabled(false);
     }
+
+    private void stopTimer() { sharedViewModel.stopTimer(); }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         stopTimer();
         handler.removeCallbacksAndMessages(null);
+        if (gameListener != null) gameListener.remove();
     }
 }

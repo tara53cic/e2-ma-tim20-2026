@@ -14,7 +14,7 @@ public class MatchViewModel extends ViewModel {
     private final MutableLiveData<Integer> timeRemaining = new MutableLiveData<>(60);
     private final MutableLiveData<Integer> player1Score = new MutableLiveData<>(0);
     private final MutableLiveData<Integer> player2Score = new MutableLiveData<>(0);
-    private final MutableLiveData<String> currentFragment = new MutableLiveData<>("MOJ_BROJ_R1");
+    private final MutableLiveData<String> currentFragment = new MutableLiveData<>("WAITING");
 
     private CountDownTimer timer;
     private Runnable timerFinishAction;
@@ -23,7 +23,7 @@ public class MatchViewModel extends ViewModel {
     private String matchId;
     private String currentUserId;
     private ListenerRegistration matchListener;
-    private boolean isPlayer1 = true; // default to true
+    private boolean isPlayer1 = true;
 
     public String getMatchId() {
         return matchId;
@@ -54,9 +54,12 @@ public class MatchViewModel extends ViewModel {
                         if (e != null || snapshot == null || !snapshot.exists()) return;
                         Match match = snapshot.toObject(Match.class);
                         if (match != null) {
-                            // Which player are we?
                             if (currentUserId != null) {
                                 isPlayer1 = currentUserId.equals(match.getPlayer1_id());
+                            }
+
+                            if (match.getPlayer2_id() != null && "WAITING".equals(currentFragment.getValue())) {
+                                currentFragment.postValue("MOJ_BROJ_R1");
                             }
 
                             if (player1Score.getValue() == null || player1Score.getValue() != match.getPlayer1_score()) {

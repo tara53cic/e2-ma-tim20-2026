@@ -163,4 +163,31 @@ public class NumberGameViewModel extends ViewModel {
         gameState.setValue(GameState.FINISHED);
         return currentExpression.getValue();
     }
+
+    public String peekTarget() {
+        String v = targetNumber.getValue();
+        return v != null ? v : "---";
+    }
+
+    public String peekNumber(int slot) {
+        List<String> nums = smallNumbers.getValue();
+        if (nums != null && slot < nums.size()) return nums.get(slot);
+        return "";
+    }
+
+    public void forceTarget(String value) {
+        handler.removeCallbacks(shuffleTargetTask);
+        targetNumber.setValue(value);
+        shuffleIndex = 0;
+        startNextNumberShuffle();
+    }
+
+    public void forceNumber(int slot, String value) {
+        if (shuffleNumberTask != null) handler.removeCallbacks(shuffleNumberTask);
+        List<String> nums = new ArrayList<>(smallNumbers.getValue());
+        nums.set(slot, value);
+        smallNumbers.setValue(nums);
+        shuffleIndex = slot + 1;
+        startNextNumberShuffle();
+    }
 }

@@ -18,43 +18,55 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.slagalica.R;
+import com.example.slagalica.data.GameStateRepository;
 import com.example.slagalica.ui.match.MatchViewModel;
+import com.google.firebase.firestore.ListenerRegistration;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class AssociationsFragment extends Fragment {
 
     private MatchViewModel sharedViewModel;
     private AssociationsViewModel associationsViewModel;
+    private GameStateRepository gameStateRepo;
+    private ListenerRegistration gameListener;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     private Button[][] fieldButtons;
-
-    private EditText etSolutionA;
-    private EditText etSolutionB;
-    private EditText etSolutionC;
-    private EditText etSolutionD;
-    private EditText etFinalSolution;
-
+    private EditText etSolutionA, etSolutionB, etSolutionC, etSolutionD, etFinalSolution;
     private Button btnSubmitAnswer;
 
     private static final int COLOR_OPENED = Color.parseColor("#F4A261");
     private static final int COLOR_SOLVED = Color.parseColor("#2EC27E");
 
+    private String matchId;
+    private String gameKey;
+    private boolean localRoundOver = false;
+
+    private boolean advanceCalled = false;
+    private int activeFirestorePlayer = 1;
+
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater,
-                             @Nullable ViewGroup container,
-                             @Nullable Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_associations, container, false);
     }
 
     @Override
-    public void onViewCreated(@NonNull View view,
-                              @Nullable Bundle savedInstanceState) {
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
         sharedViewModel = new ViewModelProvider(requireActivity()).get(MatchViewModel.class);
         associationsViewModel = new ViewModelProvider(this).get(AssociationsViewModel.class);
+        gameStateRepo = new GameStateRepository();
+
+        matchId = sharedViewModel.getMatchId();
+        String phase = sharedViewModel.getCurrentFragment().getValue();
+        gameKey = "ASOCIJACIJE_R1".equals(phase) ? "assoc_r1" : "assoc_r2";
 
         connectViews(view);
         setupFieldClicks();
@@ -62,121 +74,163 @@ public class AssociationsFragment extends Fragment {
 
         btnSubmitAnswer.setOnClickListener(v -> checkAnswer());
 
+        boolean isInitiator = "assoc_r1".equals(gameKey)
+                ? sharedViewModel.getIsPlayer1()
+                : !sharedViewModel.getIsPlayer1();
+
+        if (matchId != null && isInitiator) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("currentPlayer", 1);
+            data.put("roundDone", false);
+            for (int c = 0; c < 4; c++) {
+                data.put("solvedCol" + c, false);
+                for (int r = 0; r < 4; r++) data.put("open_" + c + "_" + r, false);
+            }
+            data.put("finalSolved", false);
+            gameStateRepo.set(matchId, gameKey, data);
+        }
+
+        listenToGameState();
         sharedViewModel.startRoundTimer(120, this::finishRound);
     }
+
+
+    private void listenToGameState() {
+        if (matchId == null) return;
+        gameListener = gameStateRepo.listen(matchId, gameKey, (snapshot, e) -> {
+            if (e != null || snapshot == null || !snapshot.exists()) return;
+
+            Long cp = snapshot.getLong("currentPlayer");
+            if (cp != null) activeFirestorePlayer = cp.intValue();
+
+            for (int col = 0; col < 4; col++) {
+                for (int row = 0; row < 4; row++) {
+                    Boolean opened = snapshot.getBoolean("open_" + col + "_" + row);
+                    if (Boolean.TRUE.equals(opened) && !associationsViewModel.openedFields[col][row]) {
+                        associationsViewModel.openedFields[col][row] = true;
+                        fieldButtons[col][row].setText(associationsViewModel.fields[col][row]);
+                        fieldButtons[col][row].setEnabled(false);
+                        fieldButtons[col][row].setBackgroundTintList(ColorStateList.valueOf(COLOR_OPENED));
+                        associationsViewModel.activeColumn = col;
+                    }
+                }
+                Boolean solved = snapshot.getBoolean("solvedCol" + col);
+                if (Boolean.TRUE.equals(solved) && !associationsViewModel.solvedColumns[col]) {
+                    associationsViewModel.solvedColumns[col] = true;
+                    revealColumn(col);
+                    lockColumnInput(col);
+                }
+            }
+
+            Boolean fs = snapshot.getBoolean("finalSolved");
+            if (Boolean.TRUE.equals(fs) && !associationsViewModel.finalSolved) {
+                associationsViewModel.finalSolved = true;
+                revealAll();
+            }
+
+
+            Boolean done = snapshot.getBoolean("roundDone");
+            if (Boolean.TRUE.equals(done)) {
+                doAdvance();
+            }
+
+            refreshInputState();
+        });
+    }
+
+    private boolean isMyTurn() {
+        boolean iAmPlayer1 = sharedViewModel.getIsPlayer1();
+        return (iAmPlayer1 && activeFirestorePlayer == 1) || (!iAmPlayer1 && activeFirestorePlayer == 2);
+    }
+
+    private void refreshInputState() {
+        if (!isMyTurn() || localRoundOver) {
+            lockAllInputs();
+        } else {
+            if (associationsViewModel.activeColumn >= 0) {
+                unlockOnlyThisColumnAndFinal(associationsViewModel.activeColumn);
+            }
+        }
+    }
+
+
     private void connectViews(View view) {
         fieldButtons = new Button[][]{
-                {
-                        view.findViewById(R.id.btnA1),
-                        view.findViewById(R.id.btnA2),
-                        view.findViewById(R.id.btnA3),
-                        view.findViewById(R.id.btnA4)
-                },
-                {
-                        view.findViewById(R.id.btnB1),
-                        view.findViewById(R.id.btnB2),
-                        view.findViewById(R.id.btnB3),
-                        view.findViewById(R.id.btnB4)
-                },
-                {
-                        view.findViewById(R.id.btnC1),
-                        view.findViewById(R.id.btnC2),
-                        view.findViewById(R.id.btnC3),
-                        view.findViewById(R.id.btnC4)
-                },
-                {
-                        view.findViewById(R.id.btnD1),
-                        view.findViewById(R.id.btnD2),
-                        view.findViewById(R.id.btnD3),
-                        view.findViewById(R.id.btnD4)
-                }
+                {view.findViewById(R.id.btnA1), view.findViewById(R.id.btnA2), view.findViewById(R.id.btnA3), view.findViewById(R.id.btnA4)},
+                {view.findViewById(R.id.btnB1), view.findViewById(R.id.btnB2), view.findViewById(R.id.btnB3), view.findViewById(R.id.btnB4)},
+                {view.findViewById(R.id.btnC1), view.findViewById(R.id.btnC2), view.findViewById(R.id.btnC3), view.findViewById(R.id.btnC4)},
+                {view.findViewById(R.id.btnD1), view.findViewById(R.id.btnD2), view.findViewById(R.id.btnD3), view.findViewById(R.id.btnD4)}
         };
-
         etSolutionA = view.findViewById(R.id.etSolutionA);
         etSolutionB = view.findViewById(R.id.etSolutionB);
         etSolutionC = view.findViewById(R.id.etSolutionC);
         etSolutionD = view.findViewById(R.id.etSolutionD);
         etFinalSolution = view.findViewById(R.id.etFinalSolution);
-
         btnSubmitAnswer = view.findViewById(R.id.btnSubmitAnswer);
     }
 
     private void setupFieldClicks() {
         for (int column = 0; column < 4; column++) {
             for (int row = 0; row < 4; row++) {
-                int c = column;
-                int r = row;
-
+                int c = column, r = row;
                 fieldButtons[c][r].setOnClickListener(v -> openField(c, r));
             }
         }
     }
 
     private void openField(int column, int row) {
+        if (!isMyTurn()) return;
         boolean opened = associationsViewModel.openField(column, row);
-
         if (!opened) return;
 
         fieldButtons[column][row].setText(associationsViewModel.fields[column][row]);
         fieldButtons[column][row].setEnabled(false);
         fieldButtons[column][row].setBackgroundTintList(ColorStateList.valueOf(COLOR_OPENED));
-
         unlockOnlyThisColumnAndFinal(column);
+
+        if (matchId != null) {
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("open_" + column + "_" + row, true);
+            gameStateRepo.update(matchId, gameKey, updates);
+        }
     }
 
     private void checkAnswer() {
+        if (!isMyTurn() || localRoundOver) return;
         if (associationsViewModel.finalSolved) return;
-
         if (associationsViewModel.activeColumn == -1) {
             Toast.makeText(requireContext(), "Prvo otvorite neko polje.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if (!isEmpty(etFinalSolution)) {
-            checkFinalAnswer();
-            return;
-        }
-
-        if (!isEmpty(etSolutionA) && etSolutionA.isEnabled()) {
-            checkColumnAnswer(0, etSolutionA);
-            return;
-        }
-
-        if (!isEmpty(etSolutionB) && etSolutionB.isEnabled()) {
-            checkColumnAnswer(1, etSolutionB);
-            return;
-        }
-
-        if (!isEmpty(etSolutionC) && etSolutionC.isEnabled()) {
-            checkColumnAnswer(2, etSolutionC);
-            return;
-        }
-
-        if (!isEmpty(etSolutionD) && etSolutionD.isEnabled()) {
-            checkColumnAnswer(3, etSolutionD);
-            return;
-        }
+        if (!isEmpty(etFinalSolution)) { checkFinalAnswer(); return; }
+        if (!isEmpty(etSolutionA) && etSolutionA.isEnabled()) { checkColumnAnswer(0, etSolutionA); return; }
+        if (!isEmpty(etSolutionB) && etSolutionB.isEnabled()) { checkColumnAnswer(1, etSolutionB); return; }
+        if (!isEmpty(etSolutionC) && etSolutionC.isEnabled()) { checkColumnAnswer(2, etSolutionC); return; }
+        if (!isEmpty(etSolutionD) && etSolutionD.isEnabled()) { checkColumnAnswer(3, etSolutionD); return; }
 
         Toast.makeText(requireContext(), "Unesite rešenje kolone ili konačno rešenje.", Toast.LENGTH_SHORT).show();
     }
 
     private void checkColumnAnswer(int column, EditText editText) {
         String answer = editText.getText().toString();
-
         if (associationsViewModel.checkColumnAnswer(column, answer)) {
             int points = associationsViewModel.solveColumn(column);
-
             editText.setText(associationsViewModel.columnSolutions[column]);
             editText.setTextColor(Color.WHITE);
             editText.setAlpha(1f);
             editText.setEnabled(false);
             editText.setBackgroundTintList(ColorStateList.valueOf(COLOR_SOLVED));
-
             revealColumn(column);
-
             Toast.makeText(requireContext(), "Tačno! +" + points + " bodova", Toast.LENGTH_SHORT).show();
-
             unlockUnsolvedColumnsAndFinal();
+
+            if (matchId != null) {
+                Map<String, Object> updates = new HashMap<>();
+                updates.put("solvedCol" + column, true);
+                for (int r = 0; r < 4; r++) updates.put("open_" + column + "_" + r, true);
+                gameStateRepo.update(matchId, gameKey, updates);
+            }
         } else {
             wrongAnswer();
         }
@@ -184,23 +238,69 @@ public class AssociationsFragment extends Fragment {
 
     private void checkFinalAnswer() {
         String answer = etFinalSolution.getText().toString();
-
         if (associationsViewModel.checkFinalAnswer(answer)) {
             int points = associationsViewModel.solveFinal();
-
             etFinalSolution.setText(associationsViewModel.finalSolution);
             etFinalSolution.setEnabled(false);
             etFinalSolution.setBackgroundTintList(ColorStateList.valueOf(COLOR_SOLVED));
-
             revealAll();
-
             Toast.makeText(requireContext(), "Tačno konačno rešenje! +" + points + " bodova", Toast.LENGTH_SHORT).show();
 
+            if (matchId != null) {
+                Map<String, Object> updates = new HashMap<>();
+                updates.put("finalSolved", true);
+                for (int c = 0; c < 4; c++) {
+                    updates.put("solvedCol" + c, true);
+                    for (int r = 0; r < 4; r++) updates.put("open_" + c + "_" + r, true);
+                }
+                gameStateRepo.update(matchId, gameKey, updates);
+            }
             finishRound();
         } else {
             wrongAnswer();
         }
     }
+
+    private void wrongAnswer() {
+        int next = associationsViewModel.currentPlayer == 1 ? 2 : 1;
+        Toast.makeText(requireContext(), "Nije tačno. Igra igrač " + next, Toast.LENGTH_SHORT).show();
+        clearInputs();
+        lockAllInputs();
+        associationsViewModel.switchPlayer();
+        sharedViewModel.stopTimer();
+        sharedViewModel.startRoundTimer(120, this::finishRound);
+
+        if (matchId != null) {
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("currentPlayer", next);
+            gameStateRepo.update(matchId, gameKey, updates);
+        }
+    }
+
+    private void finishRound() {
+        if (localRoundOver || !isAdded()) return;
+        localRoundOver = true;
+        sharedViewModel.stopTimer();
+        // Each phone awards its OWN accumulated points here
+        sharedViewModel.addCurrentPlayerPoints(associationsViewModel.currentScore);
+
+        if (matchId != null) {
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("roundDone", true);
+            gameStateRepo.update(matchId, gameKey, updates);
+        } else {
+            doAdvance();
+        }
+    }
+
+    private void doAdvance() {
+        if (advanceCalled) return;
+        advanceCalled = true;
+        handler.postDelayed(() -> {
+            if (isAdded()) sharedViewModel.advanceGamePhase();
+        }, 1000);
+    }
+
 
     private void revealColumn(int column) {
         for (int row = 0; row < 4; row++) {
@@ -211,20 +311,20 @@ public class AssociationsFragment extends Fragment {
     }
 
     private void revealAll() {
-        EditText[] solutionInputs = {
-                etSolutionA,
-                etSolutionB,
-                etSolutionC,
-                etSolutionD
-        };
-
+        EditText[] inputs = {etSolutionA, etSolutionB, etSolutionC, etSolutionD};
         for (int column = 0; column < 4; column++) {
-            solutionInputs[column].setText(associationsViewModel.columnSolutions[column]);
-            solutionInputs[column].setEnabled(false);
-            solutionInputs[column].setBackgroundTintList(ColorStateList.valueOf(COLOR_SOLVED));
-
+            inputs[column].setText(associationsViewModel.columnSolutions[column]);
+            inputs[column].setEnabled(false);
+            inputs[column].setBackgroundTintList(ColorStateList.valueOf(COLOR_SOLVED));
             revealColumn(column);
         }
+    }
+
+    private void lockColumnInput(int column) {
+        EditText[] inputs = {etSolutionA, etSolutionB, etSolutionC, etSolutionD};
+        inputs[column].setText(associationsViewModel.columnSolutions[column]);
+        inputs[column].setEnabled(false);
+        inputs[column].setBackgroundTintList(ColorStateList.valueOf(COLOR_SOLVED));
     }
 
     private void lockAllInputs() {
@@ -237,45 +337,17 @@ public class AssociationsFragment extends Fragment {
 
     private void unlockOnlyThisColumnAndFinal(int column) {
         lockAllInputs();
-
-        if (column == 0 && !associationsViewModel.solvedColumns[0]) {
-            etSolutionA.setEnabled(true);
-        }
-
-        if (column == 1 && !associationsViewModel.solvedColumns[1]) {
-            etSolutionB.setEnabled(true);
-        }
-
-        if (column == 2 && !associationsViewModel.solvedColumns[2]) {
-            etSolutionC.setEnabled(true);
-        }
-
-        if (column == 3 && !associationsViewModel.solvedColumns[3]) {
-            etSolutionD.setEnabled(true);
-        }
-
+        EditText[] inputs = {etSolutionA, etSolutionB, etSolutionC, etSolutionD};
+        if (!associationsViewModel.solvedColumns[column]) inputs[column].setEnabled(true);
         etFinalSolution.setEnabled(true);
     }
 
     private void unlockUnsolvedColumnsAndFinal() {
         lockAllInputs();
-
-        if (!associationsViewModel.solvedColumns[0]) {
-            etSolutionA.setEnabled(true);
+        EditText[] inputs = {etSolutionA, etSolutionB, etSolutionC, etSolutionD};
+        for (int c = 0; c < 4; c++) {
+            if (!associationsViewModel.solvedColumns[c]) inputs[c].setEnabled(true);
         }
-
-        if (!associationsViewModel.solvedColumns[1]) {
-            etSolutionB.setEnabled(true);
-        }
-
-        if (!associationsViewModel.solvedColumns[2]) {
-            etSolutionC.setEnabled(true);
-        }
-
-        if (!associationsViewModel.solvedColumns[3]) {
-            etSolutionD.setEnabled(true);
-        }
-
         etFinalSolution.setEnabled(true);
     }
 
@@ -283,60 +355,18 @@ public class AssociationsFragment extends Fragment {
         return editText.getText().toString().trim().isEmpty();
     }
 
-    private void finishRound() {
-        if (!isAdded()) return;
-
-        sharedViewModel.stopTimer();
-        sharedViewModel.addCurrentPlayerPoints(associationsViewModel.currentScore);
-
-        handler.postDelayed(() -> {
-            if (isAdded()) {
-                sharedViewModel.advanceGamePhase();
-            }
-        }, 1000);
+    private void clearInputs() {
+        if (!associationsViewModel.solvedColumns[0]) etSolutionA.setText("");
+        if (!associationsViewModel.solvedColumns[1]) etSolutionB.setText("");
+        if (!associationsViewModel.solvedColumns[2]) etSolutionC.setText("");
+        if (!associationsViewModel.solvedColumns[3]) etSolutionD.setText("");
+        if (!associationsViewModel.finalSolved) etFinalSolution.setText("");
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         handler.removeCallbacksAndMessages(null);
-    }
-
-    private void wrongAnswer() {
-        Toast.makeText(
-                requireContext(),
-                "Nije tačno. Igra igrač " + (associationsViewModel.currentPlayer == 1 ? 2 : 1),
-                Toast.LENGTH_SHORT
-        ).show();
-
-        clearInputs();
-        lockAllInputs();
-
-        associationsViewModel.switchPlayer();
-
-        sharedViewModel.stopTimer();
-        sharedViewModel.startRoundTimer(120, this::wrongAnswer);
-    }
-
-    private void clearInputs() {
-        if (!associationsViewModel.solvedColumns[0]) {
-            etSolutionA.setText("");
-        }
-
-        if (!associationsViewModel.solvedColumns[1]) {
-            etSolutionB.setText("");
-        }
-
-        if (!associationsViewModel.solvedColumns[2]) {
-            etSolutionC.setText("");
-        }
-
-        if (!associationsViewModel.solvedColumns[3]) {
-            etSolutionD.setText("");
-        }
-
-        if (!associationsViewModel.finalSolved) {
-            etFinalSolution.setText("");
-        }
+        if (gameListener != null) gameListener.remove();
     }
 }

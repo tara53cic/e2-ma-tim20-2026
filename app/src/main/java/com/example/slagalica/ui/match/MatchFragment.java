@@ -61,7 +61,15 @@ public class MatchFragment extends Fragment {
         matchViewModel.getPlayer1Name().observe(getViewLifecycleOwner(), tvPlayer1Name::setText);
         matchViewModel.getPlayer2Name().observe(getViewLifecycleOwner(), tvPlayer2Name::setText);
 
+        View waitingOverlay = view.findViewById(R.id.waitingOverlay);
+
         matchViewModel.getCurrentFragment().observe(getViewLifecycleOwner(), fragmentName -> {
+            if ("WAITING".equals(fragmentName)) {
+                waitingOverlay.setVisibility(View.VISIBLE);
+                return;
+            }
+            waitingOverlay.setVisibility(View.GONE);
+
             Fragment fragment;
             if ("KZZ".equals(fragmentName)) {
                 fragment = new WhoKnowsFragment();

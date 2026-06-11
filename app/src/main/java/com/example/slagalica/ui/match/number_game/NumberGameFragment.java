@@ -16,11 +16,13 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.slagalica.R;
+import com.example.slagalica.data.NumberGameRepository;
 import com.example.slagalica.domain.service.NumberGameScoringService;
 import com.example.slagalica.domain.usecase.EvaluateMathExpressionUseCase;
 import com.example.slagalica.ui.match.MatchViewModel;
 import com.example.slagalica.utils.ShakeDetector;
 import com.google.android.material.button.MaterialButton;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +36,12 @@ public class NumberGameFragment extends Fragment {
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private ShakeDetector shakeDetector;
+    private NumberGameRepository numberGameRepo;
+    private ListenerRegistration gameListener;
+
+    private String matchId;
+    private String gameKey;
+    private boolean isActivePlayer;
 
     @Nullable
     @Override
@@ -49,6 +57,13 @@ public class NumberGameFragment extends Fragment {
         sharedViewModel = new ViewModelProvider(requireActivity()).get(MatchViewModel.class);
         evaluateMathExpressionUseCase = new EvaluateMathExpressionUseCase();
         scoringService = new NumberGameScoringService();
+        numberGameRepo = new NumberGameRepository();
+
+        matchId = sharedViewModel.getMatchId();
+        String phase = sharedViewModel.getCurrentFragment().getValue();
+        boolean isRound1 = "MOJ_BROJ_R1".equals(phase);
+        gameKey = isRound1 ? "number_game_r1" : "number_game_r2";
+        isActivePlayer = isRound1 ? sharedViewModel.getIsPlayer1() : !sharedViewModel.getIsPlayer1();
 
         TextView tvTargetNumber = view.findViewById(R.id.tvTargetNumber);
         TextView tvCalcScreen = view.findViewById(R.id.tvCalcScreen);
@@ -59,12 +74,10 @@ public class NumberGameFragment extends Fragment {
             accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
             shakeDetector = new ShakeDetector();
             shakeDetector.setOnShakeListener(() -> {
+                if (!isActivePlayer) return;
                 NumberGameViewModel.GameState state = viewModel.getGameState().getValue();
                 if (state == NumberGameViewModel.GameState.SHUFFLE_TARGET || state == NumberGameViewModel.GameState.SHUFFLE_NUMBERS) {
-                    String phase = sharedViewModel.getCurrentFragment().getValue();
-                    if (!"MOJ_BROJ_R2".equals(phase)) {
-                        viewModel.onStopClicked();
-                    }
+                    handleStopClicked();
                 }
             });
         }
@@ -86,12 +99,11 @@ public class NumberGameFragment extends Fragment {
         });
 
         viewModel.getGameState().observe(getViewLifecycleOwner(), state -> {
-            String currentPhase = sharedViewModel.getCurrentFragment().getValue();
-            boolean isOpponentRound = "MOJ_BROJ_R2".equals(currentPhase);
-
             if (state == NumberGameViewModel.GameState.SHUFFLE_TARGET) {
-                btnStopTarget.setVisibility(isOpponentRound ? View.GONE : View.VISIBLE);
-                sharedViewModel.startRoundTimer(5, () -> viewModel.onStopClicked());
+                btnStopTarget.setVisibility(isActivePlayer ? View.VISIBLE : View.GONE);
+                sharedViewModel.startRoundTimer(5, () -> {
+                    if (isActivePlayer) handleStopClicked();
+                });
             } else if (state == NumberGameViewModel.GameState.PLAYING) {
                 btnStopTarget.setVisibility(View.GONE);
                 sharedViewModel.startRoundTimer(60, () -> submitGameResult());
@@ -102,10 +114,10 @@ public class NumberGameFragment extends Fragment {
 
         viewModel.getCurrentNumberIndex().observe(getViewLifecycleOwner(), index -> {
             if (index >= 0 && viewModel.getGameState().getValue() == NumberGameViewModel.GameState.SHUFFLE_NUMBERS) {
-                String currentPhase = sharedViewModel.getCurrentFragment().getValue();
-                boolean isOpponentRound = "MOJ_BROJ_R2".equals(currentPhase);
-                btnStopTarget.setVisibility(isOpponentRound ? View.GONE : View.VISIBLE);
-                sharedViewModel.startRoundTimer(5, () -> viewModel.onStopClicked());
+                btnStopTarget.setVisibility(isActivePlayer ? View.VISIBLE : View.GONE);
+                sharedViewModel.startRoundTimer(5, () -> {
+                    if (isActivePlayer) handleStopClicked();
+                });
             }
         });
 
@@ -117,7 +129,9 @@ public class NumberGameFragment extends Fragment {
 
         viewModel.getCurrentExpression().observe(getViewLifecycleOwner(), tvCalcScreen::setText);
 
-        btnStopTarget.setOnClickListener(v -> viewModel.onStopClicked());
+        btnStopTarget.setOnClickListener(v -> {
+            if (isActivePlayer) handleStopClicked();
+        });
 
         for (int i = 0; i < numberButtons.size(); i++) {
             final int index = i;
@@ -135,10 +149,86 @@ public class NumberGameFragment extends Fragment {
 
         view.findViewById(R.id.btnBackspace).setOnClickListener(v -> viewModel.onBackspace());
         view.findViewById(R.id.btnClearAll).setOnClickListener(v -> viewModel.onClearAll());
-
         view.findViewById(R.id.btnConfirmCalc).setOnClickListener(v -> submitGameResult());
 
-        viewModel.startTargetShuffle();
+        if (matchId != null) {
+            if (isActivePlayer) {
+                numberGameRepo.initRound(matchId, gameKey).addOnSuccessListener(v -> {
+                    viewModel.startTargetShuffle();
+                    listenToGameState();
+                });
+            } else {
+                viewModel.startTargetShuffle();
+                listenToGameState();
+            }
+        } else {
+            viewModel.startTargetShuffle();
+        }
+    }
+
+    private void handleStopClicked() {
+        NumberGameViewModel.GameState state = viewModel.getGameState().getValue();
+        if (state == NumberGameViewModel.GameState.SHUFFLE_TARGET) {
+            String locked = viewModel.peekTarget();
+            viewModel.onStopClicked();
+            if (matchId != null) numberGameRepo.lockTarget(matchId, gameKey, locked);
+        } else if (state == NumberGameViewModel.GameState.SHUFFLE_NUMBERS) {
+            int slot = viewModel.getCurrentNumberIndex().getValue() != null
+                    ? viewModel.getCurrentNumberIndex().getValue() : 0;
+            String locked = viewModel.peekNumber(slot);
+            viewModel.onStopClicked();
+            if (matchId != null) numberGameRepo.lockNumber(matchId, gameKey, slot, locked);
+        }
+    }
+
+    private void listenToGameState() {
+        gameListener = numberGameRepo.listen(matchId, gameKey, (snapshot, e) -> {
+            if (e != null || snapshot == null || !snapshot.exists()) return;
+
+            Long lockPhase = snapshot.getLong("lockPhase");
+            if (lockPhase == null) return;
+
+            if (!isActivePlayer) {
+                NumberGameViewModel.GameState state = viewModel.getGameState().getValue();
+
+                if (lockPhase >= 1 && state == NumberGameViewModel.GameState.SHUFFLE_TARGET) {
+                    String target = snapshot.getString("targetNumber");
+                    if (target != null) viewModel.forceTarget(target);
+                }
+
+                for (int slot = 0; slot < 6; slot++) {
+                    if (lockPhase >= slot + 2) {
+                        String val = snapshot.getString("num" + slot);
+                        Integer curIndex = viewModel.getCurrentNumberIndex().getValue();
+                        NumberGameViewModel.GameState curState = viewModel.getGameState().getValue();
+                        if (val != null && !val.isEmpty()
+                                && curState == NumberGameViewModel.GameState.SHUFFLE_NUMBERS
+                                && curIndex != null && curIndex == slot) {
+                            viewModel.forceNumber(slot, val);
+                        }
+                    }
+                }
+            }
+
+            Boolean p1sub = snapshot.getBoolean("p1Submitted");
+            Boolean p2sub = snapshot.getBoolean("p2Submitted");
+            if (Boolean.TRUE.equals(p1sub) && Boolean.TRUE.equals(p2sub) && !resultFinalized) {
+                resultFinalized = true;
+
+                Long p1res = snapshot.getLong("p1Result");
+                Long p2res = snapshot.getLong("p2Result");
+                long myResult     = sharedViewModel.getIsPlayer1() ? (p1res != null ? p1res : 0L) : (p2res != null ? p2res : 0L);
+                long opponentResult = sharedViewModel.getIsPlayer1() ? (p2res != null ? p2res : 0L) : (p1res != null ? p1res : 0L);
+
+                String targetStr = viewModel.getTargetNumber().getValue();
+                long targetLong = targetStr != null && !targetStr.equals("---") ? Long.parseLong(targetStr) : 0;
+
+                int points = scoringService.calculatePoints(targetLong, myResult, opponentResult, true);
+                sharedViewModel.addCurrentPlayerPoints(points);
+                Toast.makeText(getContext(), getString(R.string.game_result_toast, myResult, points), Toast.LENGTH_LONG).show();
+                sharedViewModel.advanceGamePhase();
+            }
+        });
     }
 
     @Override
@@ -157,6 +247,14 @@ public class NumberGameFragment extends Fragment {
         }
     }
 
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (gameListener != null) gameListener.remove();
+    }
+
+    private boolean resultFinalized = false;
+
     private void submitGameResult() {
         if (viewModel.getGameState().getValue() == NumberGameViewModel.GameState.FINISHED) return;
 
@@ -165,17 +263,16 @@ public class NumberGameFragment extends Fragment {
         Double result = evaluateMathExpressionUseCase.evaluate(expr);
         long resLong = result != null ? Math.round(result) : 0L;
 
-        String targetStr = viewModel.getTargetNumber().getValue();
-        long targetLong = targetStr != null && !targetStr.equals("---") ? Long.parseLong(targetStr) : 0;
-
-
-        long opponentResult = 0L;
-
-        int points = scoringService.calculatePoints(targetLong, resLong, opponentResult, true);
-
-        sharedViewModel.addCurrentPlayerPoints(points);
-
-        Toast.makeText(getContext(), getString(R.string.game_result_toast, resLong, points), Toast.LENGTH_LONG).show();
-        sharedViewModel.advanceGamePhase();
+        if (matchId != null) {
+            numberGameRepo.submitResult(matchId, gameKey, sharedViewModel.getIsPlayer1(), resLong);
+            Toast.makeText(getContext(), "Predato! Čekanje protivnika...", Toast.LENGTH_SHORT).show();
+        } else {
+            String targetStr = viewModel.getTargetNumber().getValue();
+            long targetLong = targetStr != null && !targetStr.equals("---") ? Long.parseLong(targetStr) : 0;
+            int points = scoringService.calculatePoints(targetLong, resLong, 0, true);
+            sharedViewModel.addCurrentPlayerPoints(points);
+            Toast.makeText(getContext(), getString(R.string.game_result_toast, resLong, points), Toast.LENGTH_LONG).show();
+            sharedViewModel.advanceGamePhase();
+        }
     }
 }
