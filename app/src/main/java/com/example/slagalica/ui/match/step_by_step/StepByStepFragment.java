@@ -15,18 +15,24 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.slagalica.R;
+import com.example.slagalica.data.GameStateRepository;
 import com.example.slagalica.domain.models.StepByStep;
 import com.example.slagalica.ui.match.MatchViewModel;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class StepByStepFragment extends Fragment {
 
     private MatchViewModel sharedViewModel;
     private StepByStepViewModel stepByStepViewModel;
+    private GameStateRepository gameStateRepo;
+    private ListenerRegistration gameListener;
 
     private List<TextView> steps = new ArrayList<>();
     private TextInputEditText etStepAnswer;
@@ -37,6 +43,11 @@ public class StepByStepFragment extends Fragment {
 
     private int currentRevealedStep = 0;
     private boolean isOpponentPhase = false;
+    private boolean roundDone = false;
+
+    private String matchId;
+    private String gameKey;
+    private boolean isActivePlayer;
 
     @Nullable
     @Override
@@ -50,32 +61,35 @@ public class StepByStepFragment extends Fragment {
 
         sharedViewModel = new ViewModelProvider(requireActivity()).get(MatchViewModel.class);
         stepByStepViewModel = new ViewModelProvider(this).get(StepByStepViewModel.class);
+        gameStateRepo = new GameStateRepository();
+
+        matchId = sharedViewModel.getMatchId();
+        String phase = sharedViewModel.getCurrentFragment().getValue();
+        boolean isR1 = "KORAK_PO_KORAK_R1".equals(phase);
+        gameKey = isR1 ? "step_r1" : "step_r2";
+        isActivePlayer = isR1 ? sharedViewModel.getIsPlayer1() : !sharedViewModel.getIsPlayer1();
 
         ViewGroup stepsContainer = view.findViewById(R.id.stepsContainer);
         if (stepsContainer != null) {
             for (int i = 0; i < stepsContainer.getChildCount(); i++) {
                 View child = stepsContainer.getChildAt(i);
-                if (child instanceof TextView) {
-                    steps.add((TextView) child);
-                }
+                if (child instanceof TextView) steps.add((TextView) child);
             }
         }
 
         etStepAnswer = view.findViewById(R.id.etStepAnswer);
         btnConfirmStep = view.findViewById(R.id.btnConfirmStep);
 
+        etStepAnswer.setEnabled(isActivePlayer);
+        btnConfirmStep.setEnabled(isActivePlayer);
+
         stepByStepViewModel.getIsLoading().observe(getViewLifecycleOwner(), loading -> {
             if (loading != null && !loading) {
-                // Initialize based on round
                 List<StepByStep> games = stepByStepViewModel.getGames().getValue();
                 if (games != null && !games.isEmpty()) {
-                    boolean isR1 = "KORAK_PO_KORAK_R1".equals(sharedViewModel.getCurrentFragment().getValue());
-                    StepByStep currentData = isR1 ? games.get(0) : games.get((games.size() > 1) ? 1 : 0);
-
+                    StepByStep currentData = isR1 ? games.get(0) : games.get(games.size() > 1 ? 1 : 0);
                     currentHints.clear();
-                    for(int i = 1; i <= 7; i++) {
-                        currentHints.add(currentData.getStep(i));
-                    }
+                    for (int i = 1; i <= 7; i++) currentHints.add(currentData.getStep(i));
                     currentAnswer = currentData.getFinal_answer();
                     setupRound();
                 } else {
@@ -86,31 +100,37 @@ public class StepByStepFragment extends Fragment {
     }
 
     private void setupRound() {
-        btnConfirmStep.setEnabled(true);
-        btnConfirmStep.setOnClickListener(v -> checkAnswer());
+        if (isActivePlayer) {
+            btnConfirmStep.setOnClickListener(v -> checkAnswer());
+        }
 
         currentRevealedStep = 0;
         isOpponentPhase = false;
 
+        listenToGameState();
+
         sharedViewModel.getTimeRemaining().observe(getViewLifecycleOwner(), time -> {
+            if (roundDone) return;
             if (isOpponentPhase) {
-                if (time == 0) {
+                if (time != null && time == 0) {
                     sharedViewModel.stopTimer();
-                    handleTimeoutOrMiss();
+                    if (isActivePlayer) publishOutcome(false, 0);
                 }
                 return;
             }
 
             int expectedRevealedCount = 7 - (time / 10);
             if (expectedRevealedCount > currentRevealedStep && expectedRevealedCount <= 7) {
-                while(currentRevealedStep < expectedRevealedCount) {
+                while (currentRevealedStep < expectedRevealedCount) {
                     revealStep(currentRevealedStep);
                     currentRevealedStep++;
                 }
             }
-            if (time == 0 && currentRevealedStep >= 7 && !isOpponentPhase) {
+            if (time != null && time == 0 && currentRevealedStep >= 7) {
                 sharedViewModel.stopTimer();
-                startOpponentPhase();
+                if (isActivePlayer) {
+                    startOpponentPhase();
+                }
             }
         });
     }
@@ -122,46 +142,103 @@ public class StepByStepFragment extends Fragment {
     }
 
     private void checkAnswer() {
+        if (!isActivePlayer || roundDone) return;
         String guess = etStepAnswer.getText() != null ? etStepAnswer.getText().toString().trim() : "";
         if (guess.equalsIgnoreCase(currentAnswer)) {
             sharedViewModel.stopTimer();
             int points = stepByStepViewModel.calculatePoints(currentRevealedStep, isOpponentPhase);
-            sharedViewModel.addCurrentPlayerPoints(points);
-
-            if (isOpponentPhase) {
-                Toast.makeText(getContext(), getString(R.string.opponent_correct_answer, points), Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(getContext(), getString(R.string.correct_answer_points, points), Toast.LENGTH_SHORT).show();
-            }
-            showAnswerAndAdvance();
+            publishOutcome(true, points);
         } else {
             Toast.makeText(getContext(), getString(R.string.incorrect_answer), Toast.LENGTH_SHORT).show();
             etStepAnswer.setText("");
             if (isOpponentPhase) {
-                 handleTimeoutOrMiss();
+                publishOutcome(false, 0);
             }
         }
     }
 
-
     private void startOpponentPhase() {
         isOpponentPhase = true;
-        Toast.makeText(getContext(), getString(R.string.time_expired_opponent_turn), Toast.LENGTH_LONG).show();
-        sharedViewModel.startRoundTimer(10, this::handleTimeoutOrMiss);
+        sharedViewModel.startRoundTimer(10, () -> {
+            if (!roundDone) publishOutcome(false, 0);
+        });
+        if (matchId != null) {
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("phase", "OPPONENT");
+            gameStateRepo.update(matchId, gameKey, updates);
+        }
     }
 
-    private void handleTimeoutOrMiss() {
-        showAnswerAndAdvance();
+    private void publishOutcome(boolean correct, int points) {
+        if (roundDone) return;
+        roundDone = true;
+        sharedViewModel.stopTimer();
+        if (correct) sharedViewModel.addCurrentPlayerPoints(points);
+        if (matchId != null) {
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("phase", "DONE");
+            updates.put("correct", correct);
+            updates.put("points", points);
+            updates.put("answer", currentAnswer);
+            gameStateRepo.update(matchId, gameKey, updates);
+        }
+        showAnswerAndAdvance(correct, points);
     }
 
-    private void showAnswerAndAdvance() {
+    private void listenToGameState() {
+        if (matchId == null) return;
+        if (isActivePlayer) {
+            Map<String, Object> init = new HashMap<>();
+            init.put("phase", "PLAYER");
+            gameStateRepo.set(matchId, gameKey, init);
+        }
+
+        gameListener = gameStateRepo.listen(matchId, gameKey, (snapshot, e) -> {
+            if (e != null || snapshot == null || !snapshot.exists()) return;
+            String phase = snapshot.getString("phase");
+            if (roundDone) return;
+
+            if ("OPPONENT".equals(phase) && !isActivePlayer && !isOpponentPhase) {
+                isOpponentPhase = true;
+                etStepAnswer.setEnabled(false);
+                btnConfirmStep.setEnabled(false);
+            }
+
+            if ("DONE".equals(phase)) {
+                if (roundDone) return;
+                roundDone = true;
+                sharedViewModel.stopTimer();
+                Boolean correct = snapshot.getBoolean("correct");
+                Long pts = snapshot.getLong("points");
+                String answer = snapshot.getString("answer");
+                int points = pts != null ? pts.intValue() : 0;
+                if (answer != null) currentAnswer = answer;
+                if (!isActivePlayer && Boolean.TRUE.equals(correct)) {
+                    sharedViewModel.addCurrentPlayerPoints(points); // award the OTHER phone
+                }
+                showAnswerAndAdvance(Boolean.TRUE.equals(correct), points);
+            }
+        });
+    }
+
+    private void showAnswerAndAdvance(boolean correct, int points) {
         btnConfirmStep.setEnabled(false);
         etStepAnswer.setText(currentAnswer);
-
+        if (correct && isActivePlayer) {
+            Toast.makeText(getContext(),
+                    isOpponentPhase
+                            ? getString(R.string.opponent_correct_answer, points)
+                            : getString(R.string.correct_answer_points, points),
+                    Toast.LENGTH_SHORT).show();
+        }
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            if (isAdded()) {
-                sharedViewModel.advanceGamePhase();
-            }
+            if (isAdded()) sharedViewModel.advanceGamePhase();
         }, 5000);
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (gameListener != null) gameListener.remove();
     }
 }

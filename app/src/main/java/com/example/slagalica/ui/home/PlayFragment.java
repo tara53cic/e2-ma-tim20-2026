@@ -1,6 +1,5 @@
 package com.example.slagalica.ui.home;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,8 +13,9 @@ import androidx.fragment.app.Fragment;
 import com.example.slagalica.R;
 import com.example.slagalica.data.MatchRepository;
 import com.example.slagalica.domain.models.Match;
-import com.example.slagalica.ui.match.MatchFragment;
 import android.widget.Toast;
+
+import com.google.firebase.firestore.DocumentSnapshot;
 
 public class PlayFragment extends Fragment {
 
@@ -36,26 +36,47 @@ public class PlayFragment extends Fragment {
                 return;
             }
 
-            Match newMatch = new Match(
-                    null,
-                    currentUserId,
-                    null,
-                    0,
-                    0,
-                    "IN_PROGRESS"
-            );
-
             btnStartGame.setEnabled(false);
 
-            matchRepository.createMatch(newMatch).addOnCompleteListener(task -> {
-                btnStartGame.setEnabled(true);
-                if (task.isSuccessful()) {
-                    Bundle args = new Bundle();
-                    args.putString("MATCH_ID", newMatch.getId());
-                    androidx.navigation.Navigation.findNavController(view).navigate(R.id.action_playFragment_to_matchFragment, args);
-                } else {
-                    Toast.makeText(getContext(), "Failed to create match", Toast.LENGTH_SHORT).show();
+            matchRepository.findAvailableMatch().addOnSuccessListener(querySnapshot -> {
+                DocumentSnapshot availableMatch = null;
+                for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                    String p1Id = doc.getString("player1_id");
+                    if (!currentUserId.equals(p1Id)) {
+                        availableMatch = doc;
+                        break;
+                    }
                 }
+
+                if (availableMatch != null) {
+                    final String matchId = availableMatch.getId();
+                    matchRepository.joinMatch(matchId, currentUserId).addOnCompleteListener(task -> {
+                        btnStartGame.setEnabled(true);
+                        if (task.isSuccessful()) {
+                            Bundle args = new Bundle();
+                            args.putString("MATCH_ID", matchId);
+                            androidx.navigation.Navigation.findNavController(view).navigate(R.id.action_playFragment_to_matchFragment, args);
+                        } else {
+                            Toast.makeText(getContext(), "Failed to join match", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                } else {
+
+                    Match newMatch = new Match(null, currentUserId, null, 0, 0, "WAITING");
+                    matchRepository.createMatch(newMatch).addOnCompleteListener(task -> {
+                        btnStartGame.setEnabled(true);
+                        if (task.isSuccessful()) {
+                            Bundle args = new Bundle();
+                            args.putString("MATCH_ID", newMatch.getId());
+                            androidx.navigation.Navigation.findNavController(view).navigate(R.id.action_playFragment_to_matchFragment, args);
+                        } else {
+                            Toast.makeText(getContext(), "Failed to create match", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            }).addOnFailureListener(e -> {
+                btnStartGame.setEnabled(true);
+                Toast.makeText(getContext(), "Failed to find match", Toast.LENGTH_SHORT).show();
             });
         });
 
