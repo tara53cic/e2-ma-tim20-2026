@@ -19,11 +19,12 @@ public class MatchViewModel extends ViewModel {
     private CountDownTimer timer;
     private Runnable timerFinishAction;
 
-    private MatchRepository matchRepository = new MatchRepository();
+    private final MatchRepository matchRepository = new MatchRepository();
+    private final UserRepository userRepository = new UserRepository();
     private String matchId;
     private String currentUserId;
     private ListenerRegistration matchListener;
-    private boolean isPlayer1 = true;
+    private boolean isPlayer1 = false;
 
     public String getMatchId() {
         return matchId;
@@ -54,6 +55,9 @@ public class MatchViewModel extends ViewModel {
                         if (e != null || snapshot == null || !snapshot.exists()) return;
                         Match match = snapshot.toObject(Match.class);
                         if (match != null) {
+                            if (currentUserId == null) {
+                                currentUserId = matchRepository.getCurrentUserId();
+                            }
                             if (currentUserId != null) {
                                 isPlayer1 = currentUserId.equals(match.getPlayer1_id());
                             }
@@ -69,19 +73,23 @@ public class MatchViewModel extends ViewModel {
                                 player2Score.setValue(match.getPlayer2_score());
                             }
 
-                            // Fetch Usernames
-                            UserRepository userRepository = new UserRepository();
                             if (match.getPlayer1_id() != null) {
                                 userRepository.getUser(match.getPlayer1_id()).addOnSuccessListener(doc -> {
                                     if (doc.exists() && doc.getString("username") != null && !doc.getString("username").isEmpty()) {
-                                        player1Name.setValue(doc.getString("username"));
+                                        String name = doc.getString("username");
+                                        if (player1Name.getValue() == null || !name.equals(player1Name.getValue())) {
+                                            player1Name.setValue(name);
+                                        }
                                     }
                                 });
                             }
                             if (match.getPlayer2_id() != null) {
                                 userRepository.getUser(match.getPlayer2_id()).addOnSuccessListener(doc -> {
                                     if (doc.exists() && doc.getString("username") != null && !doc.getString("username").isEmpty()) {
-                                        player2Name.setValue(doc.getString("username"));
+                                        String name = doc.getString("username");
+                                        if (player2Name.getValue() == null || !name.equals(player2Name.getValue())) {
+                                            player2Name.setValue(name);
+                                        }
                                     }
                                 });
                             }

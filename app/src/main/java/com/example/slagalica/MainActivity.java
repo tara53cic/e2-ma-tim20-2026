@@ -35,7 +35,10 @@ public class MainActivity extends AppCompatActivity {
 
             String navigateTo = getIntent().getStringExtra("NAVIGATE_TO");
             if ("MATCH".equals(navigateTo)) {
-                navController.navigate(R.id.matchFragment);
+                String matchId = getIntent().getStringExtra("MATCH_ID");
+                Bundle args = new Bundle();
+                args.putString("MATCH_ID", matchId);
+                navController.navigate(R.id.matchFragment, args);
             }
 
             navView.setOnItemSelectedListener(item -> {
