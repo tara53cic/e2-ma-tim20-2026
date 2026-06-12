@@ -1,5 +1,6 @@
 package com.example.slagalica.ui.match.match_result;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,8 +13,11 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.slagalica.R;
+import com.example.slagalica.ui.auth.AuthActivity;
 import com.example.slagalica.ui.match.MatchViewModel;
 import com.google.android.material.button.MaterialButton;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 public class MatchResultFragment extends Fragment {
@@ -60,10 +64,21 @@ public class MatchResultFragment extends Fragment {
         resultViewModel.calculateAndSaveStats(isPlayer1, p1Score, p2Score);
 
         btnHome.setOnClickListener(v -> {
-            androidx.navigation.Navigation.findNavController(v).navigate(R.id.nav_play);
+            FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+            if (currentUser != null && (currentUser.isAnonymous() || (currentUser.getEmail() != null && currentUser.getEmail().endsWith("@guest.slagalica.com")))) {
+                String uid = currentUser.getUid();
+                FirebaseFirestore.getInstance().collection("users").document(uid).delete().addOnCompleteListener(task -> {
+                    currentUser.delete().addOnCompleteListener(task1 -> {
+                        Intent intent = new Intent(requireActivity(), AuthActivity.class);
+                        startActivity(intent);
+                        requireActivity().finish();
+                    });
+                });
+            } else {
+                androidx.navigation.Navigation.findNavController(v).navigate(R.id.nav_play);
+            }
         });
 
-        // Update match status
         if (sharedViewModel.getMatchId() != null) {
             FirebaseFirestore.getInstance().collection("matches")
                     .document(sharedViewModel.getMatchId())
@@ -71,7 +86,3 @@ public class MatchResultFragment extends Fragment {
         }
     }
 }
-
-
-
-

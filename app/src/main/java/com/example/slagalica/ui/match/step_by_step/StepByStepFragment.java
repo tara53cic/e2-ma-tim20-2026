@@ -37,6 +37,7 @@ public class StepByStepFragment extends Fragment {
     private List<TextView> steps = new ArrayList<>();
     private TextInputEditText etStepAnswer;
     private MaterialButton btnConfirmStep;
+    private TextView tvTurnIndicator;
 
     private List<String> currentHints = new ArrayList<>();
     private String currentAnswer = "";
@@ -79,6 +80,7 @@ public class StepByStepFragment extends Fragment {
 
         etStepAnswer = view.findViewById(R.id.etStepAnswer);
         btnConfirmStep = view.findViewById(R.id.btnConfirmStep);
+        tvTurnIndicator = view.findViewById(R.id.tvTurnIndicator);
 
         etStepAnswer.setEnabled(isActivePlayer);
         btnConfirmStep.setEnabled(isActivePlayer);
@@ -106,6 +108,10 @@ public class StepByStepFragment extends Fragment {
 
         currentRevealedStep = 0;
         isOpponentPhase = false;
+
+        if (tvTurnIndicator != null) {
+            tvTurnIndicator.setText(isActivePlayer ? "Vi ste na potezu" : "Protivnik je na potezu");
+        }
 
         listenToGameState();
 
@@ -142,7 +148,7 @@ public class StepByStepFragment extends Fragment {
     }
 
     private void checkAnswer() {
-        if (!isActivePlayer || roundDone) return;
+        if (roundDone) return;
         String guess = etStepAnswer.getText() != null ? etStepAnswer.getText().toString().trim() : "";
         if (guess.equalsIgnoreCase(currentAnswer)) {
             sharedViewModel.stopTimer();
@@ -159,6 +165,11 @@ public class StepByStepFragment extends Fragment {
 
     private void startOpponentPhase() {
         isOpponentPhase = true;
+        etStepAnswer.setEnabled(false);
+        btnConfirmStep.setEnabled(false);
+        if (tvTurnIndicator != null) {
+            tvTurnIndicator.setText("Protivnik je na potezu");
+        }
         sharedViewModel.startRoundTimer(10, () -> {
             if (!roundDone) publishOutcome(false, 0);
         });
@@ -200,8 +211,12 @@ public class StepByStepFragment extends Fragment {
 
             if ("OPPONENT".equals(phase) && !isActivePlayer && !isOpponentPhase) {
                 isOpponentPhase = true;
-                etStepAnswer.setEnabled(false);
-                btnConfirmStep.setEnabled(false);
+                etStepAnswer.setEnabled(true);
+                btnConfirmStep.setEnabled(true);
+                btnConfirmStep.setOnClickListener(v -> checkAnswer());
+                if (tvTurnIndicator != null) {
+                    tvTurnIndicator.setText("Vi ste na potezu");
+                }
             }
 
             if ("DONE".equals(phase)) {
