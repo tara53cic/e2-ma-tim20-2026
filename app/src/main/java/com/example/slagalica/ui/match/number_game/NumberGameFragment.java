@@ -223,7 +223,7 @@ public class NumberGameFragment extends Fragment {
                 String targetStr = viewModel.getTargetNumber().getValue();
                 long targetLong = targetStr != null && !targetStr.equals("---") ? Long.parseLong(targetStr) : 0;
 
-                int points = scoringService.calculatePoints(targetLong, myResult, opponentResult, true);
+                int points = scoringService.calculatePoints(targetLong, myResult, opponentResult, isActivePlayer);
                 sharedViewModel.addCurrentPlayerPoints(points);
                 Toast.makeText(getContext(), getString(R.string.game_result_toast, myResult, points), Toast.LENGTH_LONG).show();
                 sharedViewModel.advanceGamePhase();
@@ -258,18 +258,25 @@ public class NumberGameFragment extends Fragment {
     private void submitGameResult() {
         if (viewModel.getGameState().getValue() == NumberGameViewModel.GameState.FINISHED) return;
 
-        sharedViewModel.stopTimer();
         String expr = viewModel.submitResult();
         Double result = evaluateMathExpressionUseCase.evaluate(expr);
         long resLong = result != null ? Math.round(result) : 0L;
 
         if (matchId != null) {
             numberGameRepo.submitResult(matchId, gameKey, sharedViewModel.getIsPlayer1(), resLong);
-            Toast.makeText(getContext(), "Predato! Čekanje protivnika...", Toast.LENGTH_SHORT).show();
+            TextView tvWait = getView() != null ? getView().findViewById(R.id.tvWaitingOpponent) : null;
+            if (tvWait != null) {
+                tvWait.setVisibility(View.VISIBLE);
+            }
+            View btnConfirm = getView() != null ? getView().findViewById(R.id.btnConfirmCalc) : null;
+            if(btnConfirm != null) btnConfirm.setEnabled(false);
+            View btnClearAll = getView() != null ? getView().findViewById(R.id.btnClearAll) : null;
+            if(btnClearAll != null) btnClearAll.setEnabled(false);
         } else {
             String targetStr = viewModel.getTargetNumber().getValue();
             long targetLong = targetStr != null && !targetStr.equals("---") ? Long.parseLong(targetStr) : 0;
-            int points = scoringService.calculatePoints(targetLong, resLong, 0, true);
+            int points = scoringService.calculatePoints(targetLong, resLong, 0, isActivePlayer);
+            sharedViewModel.stopTimer();
             sharedViewModel.addCurrentPlayerPoints(points);
             Toast.makeText(getContext(), getString(R.string.game_result_toast, resLong, points), Toast.LENGTH_LONG).show();
             sharedViewModel.advanceGamePhase();
