@@ -27,7 +27,10 @@
         android:name="com.example.slagalica.ui.home.StatisticsFragment"
         android:label="Statistics" />
 
-
+    <fragment
+        android:id="@+id/nav_notifications"
+        android:name="com.example.slagalica.ui.notifications.NotificationsFragment"
+        android:label="Notifications" />
 
     <fragment
         android:id="@+id/matchFragment"
