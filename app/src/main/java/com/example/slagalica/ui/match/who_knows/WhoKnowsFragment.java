@@ -15,6 +15,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.slagalica.R;
+import com.example.slagalica.data.UserStatsRepository;
 import com.example.slagalica.domain.models.WhoKnowsQuestion;
 import com.example.slagalica.ui.match.MatchViewModel;
 import com.google.android.material.button.MaterialButton;
@@ -31,6 +32,7 @@ public class WhoKnowsFragment extends Fragment {
 
     private WhoKnowsViewModel viewModel;
     private MatchViewModel sharedViewModel;
+    private final UserStatsRepository statsRepo = new UserStatsRepository();
 
     private TextView tvQuestionNumber, tvQuestion, tvFeedback;
     private MaterialButton btnAnswerA, btnAnswerB, btnAnswerC, btnAnswerD;
@@ -43,6 +45,11 @@ public class WhoKnowsFragment extends Fragment {
     private boolean gameAdvanceCalled = false;
     private boolean dataLoaded = false;
     private boolean answeredCurrent = false;
+
+    private int kzzCorrectCount   = 0;
+    private int kzzIncorrectCount = 0;
+    private int kzzPointsThisGame = 0;
+    private boolean statsWritten  = false;
 
     private String matchId;
     private ListenerRegistration questionListener;
@@ -147,7 +154,6 @@ public class WhoKnowsFragment extends Fragment {
 
         sharedViewModel.startRoundTimer(5, () -> {
             if (!isAdded() || questionResolved[index]) return;
-            // Ako nisam odgovorio — upiši -1 (nije odgovorio)
             if (!answeredCurrent) {
                 writeAnswer(index, -1, System.currentTimeMillis());
             }
@@ -172,7 +178,7 @@ public class WhoKnowsFragment extends Fragment {
         if (matchId == null) return;
         String prefix = sharedViewModel.getIsPlayer1() ? "p1" : "p2";
         Map<String, Object> data = new HashMap<>();
-        data.put(prefix + "_ans_" + qIndex, answerIndex);   // -1 = nije odgovorio
+        data.put(prefix + "_ans_" + qIndex, answerIndex);
         data.put(prefix + "_ts_" + qIndex, timestamp);
         FirebaseFirestore.getInstance()
                 .collection("matches").document(matchId)
@@ -225,6 +231,10 @@ public class WhoKnowsFragment extends Fragment {
         String feedbackMsg;
         int feedbackColor;
 
+        // Tracking za stats — šta je MOJ odgovor
+        int myAns = iAmP1 ? p1ans : p2ans;
+        boolean myCorrect = iAmP1 ? p1correct : p2correct;
+
         MaterialButton[] buttons = {btnAnswerA, btnAnswerB, btnAnswerC, btnAnswerD};
         setButtonColor(buttons[correct], COLOR_CORRECT);
 
@@ -240,24 +250,30 @@ public class WhoKnowsFragment extends Fragment {
                 feedbackMsg = "Tačno, ali protivnik je brži! +0";
                 feedbackColor = COLOR_NEUTRAL;
             }
+            // Stats: tačno odgovoreno (bez obzira ko je brži)
+            kzzCorrectCount++;
         } else if (iAmP1 && p1correct) {
             myPoints = 10;
             feedbackMsg = "Tačno! +10";
             feedbackColor = COLOR_CORRECT;
+            kzzCorrectCount++;
         } else if (!iAmP1 && p2correct) {
             myPoints = 10;
             feedbackMsg = "Tačno! +10";
             feedbackColor = COLOR_CORRECT;
+            kzzCorrectCount++;
         } else if (iAmP1 && p1ans != -1 && !p1correct) {
             myPoints = -5;
             feedbackMsg = "Netačno! -5";
             feedbackColor = COLOR_WRONG;
             if (p1ans >= 0 && p1ans < 4) setButtonColor(buttons[p1ans], COLOR_WRONG);
+            kzzIncorrectCount++;
         } else if (!iAmP1 && p2ans != -1 && !p2correct) {
             myPoints = -5;
             feedbackMsg = "Netačno! -5";
             feedbackColor = COLOR_WRONG;
             if (p2ans >= 0 && p2ans < 4) setButtonColor(buttons[p2ans], COLOR_WRONG);
+            kzzIncorrectCount++;
         } else {
             if ((!iAmP1 && p1correct) || (iAmP1 && p2correct)) {
                 myPoints = 0;
@@ -269,6 +285,8 @@ public class WhoKnowsFragment extends Fragment {
                 feedbackColor = COLOR_NEUTRAL;
             }
         }
+
+        kzzPointsThisGame += myPoints;
 
         if (myPoints != 0) sharedViewModel.addCurrentPlayerPoints(myPoints);
 
@@ -288,6 +306,8 @@ public class WhoKnowsFragment extends Fragment {
     }
 
     private void markDone() {
+        writeStats();
+
         if (matchId == null) { advanceGamePhase(); return; }
         String field = sharedViewModel.getIsPlayer1() ? "p1done" : "p2done";
         Map<String, Object> data = new HashMap<>();
@@ -296,6 +316,15 @@ public class WhoKnowsFragment extends Fragment {
                 .collection("matches").document(matchId)
                 .collection("games").document("kzz")
                 .set(data, SetOptions.merge());
+    }
+
+    private void writeStats() {
+        if (statsWritten) return;
+        statsWritten = true;
+        String uid = statsRepo.getCurrentUid();
+        if (uid != null) {
+            statsRepo.recordKzz(uid, kzzCorrectCount, kzzIncorrectCount, kzzPointsThisGame);
+        }
     }
 
     private void advanceGamePhase() {

@@ -19,12 +19,11 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.slagalica.R;
 import com.example.slagalica.data.GameStateRepository;
+import com.example.slagalica.data.UserStatsRepository;
 import com.example.slagalica.ui.match.MatchViewModel;
 import com.google.firebase.firestore.ListenerRegistration;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class AssociationsFragment extends Fragment {
@@ -32,6 +31,7 @@ public class AssociationsFragment extends Fragment {
     private MatchViewModel sharedViewModel;
     private AssociationsViewModel associationsViewModel;
     private GameStateRepository gameStateRepo;
+    private final UserStatsRepository statsRepo = new UserStatsRepository();
     private ListenerRegistration gameListener;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -46,6 +46,7 @@ public class AssociationsFragment extends Fragment {
     private String matchId;
     private String gameKey;
     private boolean localRoundOver = false;
+    private boolean statsWritten   = false;
 
     private boolean advanceCalled = false;
     private int activeFirestorePlayer = 1;
@@ -94,7 +95,6 @@ public class AssociationsFragment extends Fragment {
         sharedViewModel.startRoundTimer(120, this::finishRound);
     }
 
-
     private void listenToGameState() {
         if (matchId == null) return;
         gameListener = gameStateRepo.listen(matchId, gameKey, (snapshot, e) -> {
@@ -128,7 +128,6 @@ public class AssociationsFragment extends Fragment {
                 revealAll();
             }
 
-
             Boolean done = snapshot.getBoolean("roundDone");
             if (Boolean.TRUE.equals(done)) {
                 doAdvance();
@@ -152,7 +151,6 @@ public class AssociationsFragment extends Fragment {
             }
         }
     }
-
 
     private void connectViews(View view) {
         fieldButtons = new Button[][]{
@@ -281,7 +279,9 @@ public class AssociationsFragment extends Fragment {
         if (localRoundOver || !isAdded()) return;
         localRoundOver = true;
         sharedViewModel.stopTimer();
-        // Each phone awards its OWN accumulated points here
+
+        writeStats();
+
         sharedViewModel.addCurrentPlayerPoints(associationsViewModel.currentScore);
 
         if (matchId != null) {
@@ -293,6 +293,16 @@ public class AssociationsFragment extends Fragment {
         }
     }
 
+    private void writeStats() {
+        if (statsWritten) return;
+        statsWritten = true;
+        String uid = statsRepo.getCurrentUid();
+        if (uid != null) {
+            boolean solved = associationsViewModel.finalSolved || (associationsViewModel.currentScore > 0);
+            statsRepo.recordAsocijacije(uid, solved, associationsViewModel.currentScore);
+        }
+    }
+
     private void doAdvance() {
         if (advanceCalled) return;
         advanceCalled = true;
@@ -300,7 +310,6 @@ public class AssociationsFragment extends Fragment {
             if (isAdded()) sharedViewModel.advanceGamePhase();
         }, 1000);
     }
-
 
     private void revealColumn(int column) {
         for (int row = 0; row < 4; row++) {
