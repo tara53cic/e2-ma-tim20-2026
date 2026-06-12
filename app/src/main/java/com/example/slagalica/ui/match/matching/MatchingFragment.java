@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,62 +18,60 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.slagalica.R;
 import com.example.slagalica.data.GameStateRepository;
+import com.example.slagalica.domain.models.MatchingData;
 import com.example.slagalica.ui.match.MatchViewModel;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MatchingFragment extends Fragment {
 
+    private MatchingViewModel viewModel;
     private MatchViewModel sharedViewModel;
     private GameStateRepository gameStateRepo;
     private ListenerRegistration gameListener;
+    private ListenerRegistration dataListener;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     private Button[] leftButtons;
     private Button[] rightButtons;
-    private TextView tvSpojniceTitle;
-    private TextView tvSpojniceTurn;
-    private TextView tvFeedback;
+    private TextView tvTitle, tvTurn, tvFeedback;
 
-    private final String[] leftR1  = {"CECA", "ZDRAVKO COLIC", "DJORDJE BALASEVIC", "LEPA BRENA", "ZELJKO SAMARDZIC"};
-    private final String[] rightR1 = {"GRLICA", "RINGISPIL", "TI SI MI U KRVI", "DUGE NOGE", "KUKAVICA"};
-    private final int[] correctR1  = {4, 2, 1, 3, 0};
+    private String[] currentLeft    = new String[5];
+    private String[] currentRight   = new String[5];
+    private int[]    currentCorrect = new int[5];
 
-    private final String[] leftR2  = {"FRANCUSKA", "JAPAN", "BRAZIL", "EGIPAT", "AUSTRALIJA"};
-    private final String[] rightR2 = {"TOKIO", "BRAZILIJA", "KAIRO", "KANBERA", "PARIZ"};
-    private final int[] correctR2  = {4, 0, 1, 2, 3};
-
-    private String[] currentLeft;
-    private String[] currentRight;
-    private int[] currentCorrect;
-
-    private int selectedLeftIndex = -1;
+    private int selectedLeft = -1;
     private final boolean[] leftMatched  = new boolean[5];
     private final boolean[] rightMatched = new boolean[5];
-    private final boolean[] leftFailed   = new boolean[5];
+    private final boolean[] starterUsed  = new boolean[5];
+    private final boolean[] secondUsed   = new boolean[5];
+    private final int[]     pairOwner    = new int[5];
     private int matchedCount = 0;
-    private int myScore = 0;
 
-    private int activeFirestorePlayer;
     private boolean isRound1;
-    private boolean roundDone = false;
-    private boolean opponentPhaseSeen = false;
+    private boolean iAmStarter;
+    private boolean roundDone  = false;
+    private boolean dataLoaded = false;
+    private String  localPhase = "";
 
-    private String matchId;
-    private String gameKey;
+    private String matchId, gameKey;
 
-    private static final int COLOR_DEFAULT  = Color.parseColor("#1E3A5F");
-    private static final int COLOR_SELECTED = Color.parseColor("#F4A261");
-    private static final int COLOR_CORRECT  = Color.parseColor("#E53935");
-    private static final int COLOR_FAILED   = Color.parseColor("#374A5E");
-    private static final int COLOR_WRONG    = Color.parseColor("#455A7A");
-    private static final int COLOR_OPPONENT = Color.parseColor("#508EFA");
+    private static final int C_DEFAULT  = Color.parseColor("#1E3A5F");
+    private static final int C_SELECTED = Color.parseColor("#F4A261");
+    private static final int C_MINE     = Color.parseColor("#E53935");
+    private static final int C_OPP      = Color.parseColor("#508EFA");
+    private static final int C_NONE     = Color.parseColor("#607D8B");
+    private static final int C_FAILED   = Color.parseColor("#374A5E");
+    private static final int C_WRONG    = Color.parseColor("#455A7A");
 
-    @Nullable
-    @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    @Nullable @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_matching, container, false);
     }
 
@@ -80,19 +79,19 @@ public class MatchingFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        viewModel       = new ViewModelProvider(this).get(MatchingViewModel.class);
         sharedViewModel = new ViewModelProvider(requireActivity()).get(MatchViewModel.class);
-        gameStateRepo = new GameStateRepository();
+        gameStateRepo   = new GameStateRepository();
 
         matchId = sharedViewModel.getMatchId();
-        String phase = sharedViewModel.getCurrentFragment().getValue();
-        isRound1 = "SPOJNICE_R1".equals(phase);
-        gameKey = isRound1 ? "matching_r1" : "matching_r2";
+        String fragPhase = sharedViewModel.getCurrentFragment().getValue();
+        isRound1   = "SPOJNICE_R1".equals(fragPhase);
+        gameKey    = isRound1 ? "matching_r1" : "matching_r2";
+        iAmStarter = isRound1 ? sharedViewModel.getIsPlayer1() : !sharedViewModel.getIsPlayer1();
 
-        activeFirestorePlayer = isRound1 ? 1 : 2;
-
-        tvSpojniceTitle = view.findViewById(R.id.tvSpojniceTitle);
-        tvSpojniceTurn  = view.findViewById(R.id.tvSpojniceTurn);
-        tvFeedback      = view.findViewById(R.id.tvSpojniceFeedback);
+        tvTitle    = view.findViewById(R.id.tvSpojniceTitle);
+        tvTurn     = view.findViewById(R.id.tvSpojniceTurn);
+        tvFeedback = view.findViewById(R.id.tvSpojniceFeedback);
 
         leftButtons = new Button[]{
                 view.findViewById(R.id.btnLeft1), view.findViewById(R.id.btnLeft2),
@@ -105,252 +104,355 @@ public class MatchingFragment extends Fragment {
                 view.findViewById(R.id.btnRight5)
         };
 
-        if (isRound1) {
-            currentLeft = leftR1; currentRight = rightR1; currentCorrect = correctR1;
-            tvSpojniceTitle.setText("SPOJITE PEVACE SA PESMAMA");
+        setAllEnabled(false);
+        tvTitle.setText("Učitavanje...");
+        tvTurn.setText("");
+
+        if (isRound1 && sharedViewModel.getIsPlayer1()) {
+            viewModel.loadAndPublish(matchId);
+            viewModel.getIsLoading().observe(getViewLifecycleOwner(), loading -> {
+                if (loading == null || loading) return;
+                onDataReady();
+            });
         } else {
-            currentLeft = leftR2; currentRight = rightR2; currentCorrect = correctR2;
-            tvSpojniceTitle.setText("SPOJITE DRZAVE SA GLAVNIM GRADOVIMA");
+            waitForDataAndLoad();
         }
-
-        for (int i = 0; i < 5; i++) {
-            leftButtons[i].setText(currentLeft[i]);
-            rightButtons[i].setText(currentRight[i]);
-            final int idx = i;
-            leftButtons[i].setOnClickListener(v -> onLeftClicked(idx));
-            rightButtons[i].setOnClickListener(v -> onRightClicked(idx));
-        }
-
-        boolean isInitiator = isRound1 ? sharedViewModel.getIsPlayer1() : !sharedViewModel.getIsPlayer1();
-        if (matchId != null && isInitiator) {
-            Map<String, Object> data = new HashMap<>();
-            data.put("currentPlayer", activeFirestorePlayer);
-            data.put("roundDone", false);
-            gameStateRepo.set(matchId, gameKey, data);
-        }
-
-        listenToGameState();
-        updateTurnLabel();
-
-
-        sharedViewModel.startRoundTimer(30, () -> { if (isMyTurn()) onMyTurnTimedOut(); });
     }
 
-
-    private void listenToGameState() {
+    private void waitForDataAndLoad() {
         if (matchId == null) return;
-        gameListener = gameStateRepo.listen(matchId, gameKey, (snapshot, e) -> {
-            if (e != null || snapshot == null || !snapshot.exists()) return;
+        // Sluša matching_data — čim postoji, učitaj
+        dataListener = FirebaseFirestore.getInstance()
+                .collection("matches").document(matchId)
+                .collection("games").document("matching_data")
+                .addSnapshotListener((snap, e) -> {
+                    if (e != null || snap == null || !snap.exists() || dataLoaded) return;
+                    viewModel.loadFromMatch(matchId);
+                    viewModel.getIsLoading().observe(getViewLifecycleOwner(), loading -> {
+                        if (loading == null || loading) return;
+                        onDataReady();
+                    });
+                });
+    }
 
-            Long cp = snapshot.getLong("currentPlayer");
-            if (cp != null) activeFirestorePlayer = cp.intValue();
+    private void onDataReady() {
+        if (dataLoaded) return;
+
+        List<MatchingData> rounds = viewModel.getRounds().getValue();
+        MatchingData data = null;
+        if (rounds != null) {
+            if (isRound1 && rounds.size() >= 1)       data = rounds.get(0);
+            else if (!isRound1 && rounds.size() >= 2) data = rounds.get(1);
+        }
+
+        if (data == null || data.getLeft() == null
+                || data.getRight() == null || data.getCorrectMap() == null) {
+            tvTitle.setText("Greška: nema podataka!");
+            Toast.makeText(getContext(), "Greška pri učitavanju spojnica!", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        List<String> l = data.getLeft();
+        List<String> r = data.getRight();
+        List<Long>   m = data.getCorrectMap();
+        for (int i = 0; i < 5; i++) {
+            if (i < l.size()) currentLeft[i]    = l.get(i);
+            if (i < r.size()) currentRight[i]   = r.get(i);
+            if (i < m.size()) currentCorrect[i] = m.get(i).intValue();
+            leftButtons[i].setText(currentLeft[i]);
+            rightButtons[i].setText(currentRight[i]);
+            tint(leftButtons[i],  C_DEFAULT);
+            tint(rightButtons[i], C_DEFAULT);
+            final int idx = i;
+            leftButtons[i].setOnClickListener(v  -> onLeft(idx));
+            rightButtons[i].setOnClickListener(v -> onRight(idx));
+        }
+        tvTitle.setText(data.getTitle() != null ? data.getTitle().toUpperCase() : "SPOJNICE");
+        dataLoaded = true;
+
+        if (sharedViewModel.getIsPlayer1() && matchId != null) {
+            Map<String, Object> init = new HashMap<>();
+            init.put("phase", "STARTER");
+            init.put("roundDone", false);
+            gameStateRepo.set(matchId, gameKey, init);
+        }
+
+        startListening();
+    }
+
+    private void startListening() {
+        if (matchId == null) return;
+        gameListener = gameStateRepo.listen(matchId, gameKey, (snap, e) -> {
+            if (e != null || snap == null || !snap.exists()) return;
+            if (roundDone) return;
 
             for (int i = 0; i < 5; i++) {
-                Boolean lm = snapshot.getBoolean("leftMatched" + i);
-                Long    ri = snapshot.getLong("rightIndex" + i);
-                if (Boolean.TRUE.equals(lm) && !leftMatched[i] && ri != null) {
+                Boolean matched = snap.getBoolean("matched" + i);
+                Long    ri      = snap.getLong("rightIndex" + i);
+                Long    owner   = snap.getLong("owner" + i);
+                if (Boolean.TRUE.equals(matched) && !leftMatched[i] && ri != null) {
                     int rIdx = ri.intValue();
-                    leftMatched[i]  = true;
+                    int own  = owner != null ? owner.intValue() : 0;
+                    leftMatched[i]     = true;
                     rightMatched[rIdx] = true;
-                    leftButtons[i].setBackgroundTintList(
-                            android.content.res.ColorStateList.valueOf(COLOR_OPPONENT));
-                    rightButtons[rIdx].setBackgroundTintList(
-                            android.content.res.ColorStateList.valueOf(COLOR_OPPONENT));
-                    leftButtons[i].setEnabled(false);
-                    rightButtons[rIdx].setEnabled(false);
+                    starterUsed[i]     = true;
+                    pairOwner[i]       = own;
+                    int col = isMine(own) ? C_MINE : C_OPP;
+                    tint(leftButtons[i],     col); leftButtons[i].setEnabled(false);
+                    tint(rightButtons[rIdx], col); rightButtons[rIdx].setEnabled(false);
                     matchedCount++;
                 }
-
-                Boolean lf = snapshot.getBoolean("leftFailed" + i);
-                if (Boolean.TRUE.equals(lf) && !leftFailed[i] && !leftMatched[i]) {
-                    leftFailed[i] = true;
-                    leftButtons[i].setBackgroundTintList(
-                            android.content.res.ColorStateList.valueOf(COLOR_FAILED));
+                Boolean failed = snap.getBoolean("failed" + i);
+                if (Boolean.TRUE.equals(failed) && !starterUsed[i] && !leftMatched[i] && !"SECOND".equals(localPhase)) {
+                    starterUsed[i] = true;
+                    tint(leftButtons[i], C_FAILED);
                     leftButtons[i].setAlpha(0.5f);
                     leftButtons[i].setEnabled(false);
                 }
             }
 
-            Boolean opPhase = snapshot.getBoolean("opponentPhase");
-            if (Boolean.TRUE.equals(opPhase) && !opponentPhaseSeen && !roundDone) {
-                opponentPhaseSeen = true;
-                if (isMyTurn()) {
-                    for (int i = 0; i < 5; i++) {
-                        if (!leftMatched[i]) {
-                            leftFailed[i] = false;
-                            leftButtons[i].setAlpha(1.0f);
-                            leftButtons[i].setEnabled(true);
-                            leftButtons[i].setBackgroundTintList(
-                                    android.content.res.ColorStateList.valueOf(COLOR_DEFAULT));
-                        }
-                    }
-                    showFeedback("Vi igrate preostale pojmove!", true);
-                }
-                updateTurnLabel();
-                sharedViewModel.startRoundTimer(30, () -> { if (isMyTurn()) onMyTurnTimedOut(); });
+            String newPhase = snap.getString("phase");
+            if (newPhase != null && !newPhase.equals(localPhase)) {
+                localPhase = newPhase;
+                applyPhase();
             }
 
-            updateTurnLabel();
-
-            Boolean done = snapshot.getBoolean("roundDone");
+            Boolean done = snap.getBoolean("roundDone");
             if (Boolean.TRUE.equals(done) && !roundDone) {
                 roundDone = true;
+                sharedViewModel.stopTimer(); // stopira timer na oba
+                setAllEnabled(false);
                 handler.postDelayed(() -> {
-                    if (isAdded()) sharedViewModel.advanceGamePhase();
-                }, 1000);
+                    if (!isAdded()) return;
+                    showResults(snap);
+                    handler.postDelayed(() -> {
+                        if (isAdded()) sharedViewModel.advanceGamePhase();
+                    }, 3000);
+                }, 300);
             }
         });
     }
 
-    private boolean isMyTurn() {
-        boolean iAmP1 = sharedViewModel.getIsPlayer1();
-        return (iAmP1 && activeFirestorePlayer == 1) || (!iAmP1 && activeFirestorePlayer == 2);
-    }
-
-
-    private void onMyTurnTimedOut() {
+    private void applyPhase() {
         if (!isAdded() || roundDone) return;
-        if (!isMyTurn()) return;
+        String rnd = isRound1 ? "Runda 1" : "Runda 2";
 
-        for (int i = 0; i < 5; i++) {
-            if (!leftMatched[i]) {
-                leftFailed[i] = true;
-                leftButtons[i].setBackgroundTintList(
-                        android.content.res.ColorStateList.valueOf(COLOR_FAILED));
-                leftButtons[i].setAlpha(0.5f);
-                leftButtons[i].setEnabled(false);
+        if ("STARTER".equals(localPhase)) {
+            if (iAmStarter) {
+                for (int i = 0; i < 5; i++) {
+                    if (!leftMatched[i] && !starterUsed[i]) {
+                        leftButtons[i].setEnabled(true);
+                        leftButtons[i].setAlpha(1f);
+                    }
+                    if (!rightMatched[i]) rightButtons[i].setEnabled(true);
+                }
+                tvTurn.setText(rnd + " — Vi igrate");
+            } else {
+                setAllEnabled(false);
+                tvTurn.setText(rnd + " — Protivnik igra");
             }
+            sharedViewModel.startRoundTimer(30, () -> {
+                if (!isAdded() || roundDone) return;
+                if (iAmStarter) onStarterTimerUp();
+            });
+
+        } else if ("SECOND".equals(localPhase)) {
+            boolean iAmSecond = !iAmStarter;
+            if (iAmSecond) {
+                for (int i = 0; i < 5; i++) {
+                    if (!leftMatched[i]) {
+                        leftButtons[i].setEnabled(true);
+                        leftButtons[i].setAlpha(1f);
+                        tint(leftButtons[i], C_DEFAULT);
+                    }
+                }
+                for (int i = 0; i < 5; i++) {
+                    if (!rightMatched[i]) {
+                        rightButtons[i].setEnabled(true);
+                        tint(rightButtons[i], C_DEFAULT);
+                    }
+                }
+                tvTurn.setText(rnd + " — Vi igrate preostale");
+                showFeedback("Vaš red — povežite preostale pojmove!", true);
+            } else {
+                setAllEnabled(false);
+                tvTurn.setText(rnd + " — Protivnik igra preostale");
+                showFeedback("Protivnik igra preostale pojmove...", false);
+            }
+            sharedViewModel.startRoundTimer(30, () -> {
+                if (!isAdded() || roundDone) return;
+                if (!iAmStarter) writeFinish(); // second istekao — završi
+            });
         }
-
-        boolean anyRemaining = false;
-        for (boolean m : leftMatched) if (!m) { anyRemaining = true; break; }
-        if (!anyRemaining) { finishRound(); return; }
-
-        int next = activeFirestorePlayer == 1 ? 2 : 1;
-        showFeedback("Protivnik igra preostale pojmove!", false);
-
-        if (matchId != null) {
-            Map<String, Object> updates = new HashMap<>();
-            updates.put("currentPlayer", next);
-            updates.put("opponentPhase", true);
-            for (int i = 0; i < 5; i++) updates.put("leftFailed" + i, leftFailed[i]);
-            gameStateRepo.update(matchId, gameKey, updates);
-        }
-        activeFirestorePlayer = next;
-        updateTurnLabel();
     }
 
-
-    private void onLeftClicked(int index) {
-        if (!isMyTurn() || leftMatched[index] || leftFailed[index] || roundDone) return;
-
-        if (selectedLeftIndex >= 0 && selectedLeftIndex != index) {
-            leftButtons[selectedLeftIndex].setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(
-                            leftFailed[selectedLeftIndex] ? COLOR_FAILED : COLOR_DEFAULT));
+    private void onStarterTimerUp() {
+        if (roundDone || !iAmStarter) return;
+        boolean hasRemaining = false;
+        for (boolean m : leftMatched) if (!m) { hasRemaining = true; break; }
+        if (!hasRemaining) {
+            writeFinish();
+        } else {
+            writePhase("SECOND");
         }
-        if (selectedLeftIndex == index) {
-            leftButtons[index].setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(COLOR_DEFAULT));
-            selectedLeftIndex = -1;
+    }
+
+    private void onLeft(int idx) {
+        if (!canClick()) return;
+        if (leftMatched[idx]) return;
+        if ("STARTER".equals(localPhase) && starterUsed[idx]) return;
+        if ("SECOND".equals(localPhase) && secondUsed[idx]) return;
+
+        if (selectedLeft >= 0 && selectedLeft != idx)
+            tint(leftButtons[selectedLeft], C_DEFAULT);
+        if (selectedLeft == idx) {
+            tint(leftButtons[idx], C_DEFAULT);
+            selectedLeft = -1;
             return;
         }
-        selectedLeftIndex = index;
-        leftButtons[index].setBackgroundTintList(
-                android.content.res.ColorStateList.valueOf(COLOR_SELECTED));
+        selectedLeft = idx;
+        tint(leftButtons[idx], C_SELECTED);
     }
 
-    private void onRightClicked(int rightIndex) {
-        if (!isMyTurn() || rightMatched[rightIndex] || selectedLeftIndex < 0 || roundDone) return;
+    private void onRight(int rightIdx) {
+        if (!canClick() || rightMatched[rightIdx] || selectedLeft < 0) return;
 
-        boolean isCorrect = currentCorrect[selectedLeftIndex] == rightIndex;
-        int prevLeft = selectedLeftIndex;
-        selectedLeftIndex = -1;
+        int prevLeft = selectedLeft;
+        selectedLeft = -1;
 
-        if (isCorrect) {
-            leftButtons[prevLeft].setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(COLOR_CORRECT));
-            rightButtons[rightIndex].setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(COLOR_CORRECT));
-            leftButtons[prevLeft].setEnabled(false);
-            rightButtons[rightIndex].setEnabled(false);
-            leftMatched[prevLeft] = true;
-            rightMatched[rightIndex] = true;
-            leftFailed[prevLeft] = false;
-            myScore += 2;
+        if (currentCorrect[prevLeft] == rightIdx) {
+            int myNum = sharedViewModel.getIsPlayer1() ? 1 : 2;
+            leftMatched[prevLeft]  = true;
+            rightMatched[rightIdx] = true;
+            starterUsed[prevLeft]  = true;
+            pairOwner[prevLeft]    = myNum;
             matchedCount++;
+
+            tint(leftButtons[prevLeft],  C_MINE); leftButtons[prevLeft].setEnabled(false);
+            tint(rightButtons[rightIdx], C_MINE); rightButtons[rightIdx].setEnabled(false);
+
+            sharedViewModel.addCurrentPlayerPoints(2);
             showFeedback("+2 boda!", true);
 
             if (matchId != null) {
-                Map<String, Object> updates = new HashMap<>();
-                updates.put("leftMatched" + prevLeft, true);
-                updates.put("rightIndex" + prevLeft, rightIndex);
-                gameStateRepo.update(matchId, gameKey, updates);
+                Map<String, Object> u = new HashMap<>();
+                u.put("matched" + prevLeft, true);
+                u.put("rightIndex" + prevLeft, rightIdx);
+                u.put("owner" + prevLeft, myNum);
+                gameStateRepo.update(matchId, gameKey, u);
             }
 
-            if (matchedCount == 5) {
-                sharedViewModel.stopTimer();
-                finishRound();
-            }
+            if (matchedCount == 5) { writeFinish(); return; }
+
+            if (!iAmStarter && "SECOND".equals(localPhase) && allSecondUsed()) { writeFinish(); return; }
+
+            if (iAmStarter && "STARTER".equals(localPhase) && allStarterUsed())
+                onStarterTimerUp();
+
         } else {
-            leftFailed[prevLeft] = true;
-            leftButtons[prevLeft].setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(COLOR_FAILED));
-            leftButtons[prevLeft].setAlpha(0.5f);
-            leftButtons[prevLeft].setEnabled(false);
-            rightButtons[rightIndex].setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(COLOR_WRONG));
-            showFeedback("Nije tacno!", false);
-
+            showFeedback("Nije tačno!", false);
+            tint(rightButtons[rightIdx], C_WRONG);
             handler.postDelayed(() -> {
-                if (!isAdded()) return;
-                rightButtons[rightIndex].setBackgroundTintList(
-                        android.content.res.ColorStateList.valueOf(COLOR_DEFAULT));
-                if (matchedCount + countFailed() == 5) {
-                    sharedViewModel.stopTimer();
-                    handler.postDelayed(this::onMyTurnTimedOut, 1500);
-                }
+                if (isAdded()) tint(rightButtons[rightIdx], C_DEFAULT);
             }, 700);
+
+            if (iAmStarter && "STARTER".equals(localPhase)) {
+                starterUsed[prevLeft] = true;
+                tint(leftButtons[prevLeft], C_FAILED);
+                leftButtons[prevLeft].setAlpha(0.5f);
+                leftButtons[prevLeft].setEnabled(false);
+                if (matchId != null) {
+                    Map<String, Object> u = new HashMap<>();
+                    u.put("failed" + prevLeft, true);
+                    gameStateRepo.update(matchId, gameKey, u);
+                }
+                if (allStarterUsed()) onStarterTimerUp();
+            }
+            if (!iAmStarter && "SECOND".equals(localPhase)) {
+                secondUsed[prevLeft] = true;
+                tint(leftButtons[prevLeft], C_FAILED);
+                leftButtons[prevLeft].setAlpha(0.5f);
+                leftButtons[prevLeft].setEnabled(false);
+                if (allSecondUsed()) writeFinish();
+            }
         }
     }
 
+    private void writePhase(String phase) {
+        if (matchId == null) return;
+        Map<String, Object> u = new HashMap<>();
+        u.put("phase", phase);
+        gameStateRepo.update(matchId, gameKey, u);
+    }
 
-    private void finishRound() {
-        if (roundDone) return;
-        roundDone = true;
-        sharedViewModel.stopTimer();
-        sharedViewModel.addCurrentPlayerPoints(myScore);
+    private void writeFinish() {
+        if (roundDone || matchId == null) return;
+        Map<String, Object> u = new HashMap<>();
+        u.put("phase", "DONE");
+        u.put("roundDone", true);
+        gameStateRepo.update(matchId, gameKey, u);
+    }
 
-        if (matchId != null) {
-            Map<String, Object> updates = new HashMap<>();
-            updates.put("roundDone", true);
-            updates.put("totalScore", myScore);
-            gameStateRepo.update(matchId, gameKey, updates);
+    private boolean canClick() {
+        if (!dataLoaded || roundDone || localPhase.isEmpty()) return false;
+        if ("STARTER".equals(localPhase)) return iAmStarter;
+        if ("SECOND".equals(localPhase))  return !iAmStarter;
+        return false;
+    }
+
+    private boolean allStarterUsed() {
+        for (int i = 0; i < 5; i++) if (!starterUsed[i] && !leftMatched[i]) return false;
+        return true;
+    }
+
+    private boolean allSecondUsed() {
+        for (int i = 0; i < 5; i++) if (!secondUsed[i] && !leftMatched[i]) return false;
+        return true;
+    }
+
+    private boolean isMine(int own) {
+        return (sharedViewModel.getIsPlayer1() && own == 1)
+                || (!sharedViewModel.getIsPlayer1() && own == 2);
+    }
+
+    private void showResults(DocumentSnapshot snap) {
+        if (!isAdded()) return;
+        setAllEnabled(false);
+        tvTurn.setText("Runda završena!");
+        tvFeedback.setVisibility(View.VISIBLE);
+        tvFeedback.setTextColor(Color.WHITE);
+        tvFeedback.setText("Tačni parovi:");
+
+        for (int i = 0; i < 5; i++) {
+            rightButtons[i].setText(currentRight[currentCorrect[i]]);
+            if (leftMatched[i]) {
+                int col = isMine(pairOwner[i]) ? C_MINE : C_OPP;
+                tint(leftButtons[i],  col); leftButtons[i].setAlpha(1f);
+                tint(rightButtons[i], col); rightButtons[i].setAlpha(1f);
+            } else {
+                tint(leftButtons[i],  C_NONE); leftButtons[i].setAlpha(0.7f);
+                tint(rightButtons[i], C_NONE); rightButtons[i].setAlpha(0.7f);
+            }
         }
-        handler.postDelayed(() -> {
-            if (isAdded()) sharedViewModel.advanceGamePhase();
-        }, 1000);
     }
 
-
-    private void updateTurnLabel() {
-        String runda = isRound1 ? "Runda 1" : "Runda 2";
-        tvSpojniceTurn.setText(runda + " — " + (isMyTurn() ? "Vi igrate" : "Protivnik igra"));
-    }
-
-    private int countFailed() {
-        int count = 0;
-        for (boolean f : leftFailed) if (f) count++;
-        return count;
-    }
-
-    private void showFeedback(String msg, boolean positive) {
+    private void showFeedback(String msg, boolean ok) {
         tvFeedback.setText(msg);
-        tvFeedback.setTextColor(positive ? Color.parseColor("#2EC27E") : Color.parseColor("#F4A261"));
+        tvFeedback.setTextColor(ok
+                ? Color.parseColor("#2EC27E") : Color.parseColor("#F4A261"));
         tvFeedback.setVisibility(View.VISIBLE);
         handler.postDelayed(() -> {
             if (isAdded()) tvFeedback.setVisibility(View.INVISIBLE);
         }, 1500);
+    }
+
+    private void tint(Button b, int color) {
+        b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(color));
+    }
+
+    private void setAllEnabled(boolean en) {
+        for (Button b : leftButtons)  if (b != null) b.setEnabled(en);
+        for (Button b : rightButtons) if (b != null) b.setEnabled(en);
     }
 
     @Override
@@ -358,5 +460,6 @@ public class MatchingFragment extends Fragment {
         super.onDestroyView();
         handler.removeCallbacksAndMessages(null);
         if (gameListener != null) gameListener.remove();
+        if (dataListener != null) dataListener.remove();
     }
 }
