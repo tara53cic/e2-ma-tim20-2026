@@ -217,6 +217,12 @@ public class StepByStepFragment extends Fragment {
                 if (tvTurnIndicator != null) {
                     tvTurnIndicator.setText("Vi ste na potezu");
                 }
+                sharedViewModel.startRoundTimer(10, () -> {
+                    if (!roundDone && isAdded()) {
+                        etStepAnswer.setEnabled(false);
+                        btnConfirmStep.setEnabled(false);
+                    }
+                });
             }
 
             if ("DONE".equals(phase)) {
