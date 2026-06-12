@@ -37,6 +37,10 @@ public class AuthRepository {
         return auth.signInWithEmailAndPassword(email, password);
     }
 
+    public Task<AuthResult> loginAnonymously() {
+        return auth.signInAnonymously();
+    }
+
     public Task<Void> sendPasswordReset(String email) {
         return auth.sendPasswordResetEmail(email);
     }
@@ -49,4 +53,3 @@ public class AuthRepository {
         auth.signOut();
     }
 }
-

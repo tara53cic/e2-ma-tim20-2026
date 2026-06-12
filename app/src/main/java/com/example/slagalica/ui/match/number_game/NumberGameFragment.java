@@ -42,6 +42,7 @@ public class NumberGameFragment extends Fragment {
     private String matchId;
     private String gameKey;
     private boolean isActivePlayer;
+    private boolean initialTimerStarted = false;
 
     @Nullable
     @Override
@@ -101,9 +102,11 @@ public class NumberGameFragment extends Fragment {
         viewModel.getGameState().observe(getViewLifecycleOwner(), state -> {
             if (state == NumberGameViewModel.GameState.SHUFFLE_TARGET) {
                 btnStopTarget.setVisibility(isActivePlayer ? View.VISIBLE : View.GONE);
-                sharedViewModel.startRoundTimer(5, () -> {
-                    if (isActivePlayer) handleStopClicked();
-                });
+                if (matchId == null) {
+                    sharedViewModel.startRoundTimer(5, () -> {
+                        if (isActivePlayer) handleStopClicked();
+                    });
+                }
             } else if (state == NumberGameViewModel.GameState.PLAYING) {
                 btnStopTarget.setVisibility(View.GONE);
                 sharedViewModel.startRoundTimer(60, () -> submitGameResult());
@@ -153,8 +156,12 @@ public class NumberGameFragment extends Fragment {
 
         if (matchId != null) {
             if (isActivePlayer) {
-                numberGameRepo.initRound(matchId, gameKey).addOnSuccessListener(v -> {
+                long now = System.currentTimeMillis();
+                numberGameRepo.initRound(matchId, gameKey, now).addOnSuccessListener(v -> {
                     viewModel.startTargetShuffle();
+                    sharedViewModel.startRoundTimer(5, () -> {
+                        if (isActivePlayer) handleStopClicked();
+                    });
                     listenToGameState();
                 });
             } else {
@@ -186,9 +193,20 @@ public class NumberGameFragment extends Fragment {
             if (e != null || snapshot == null || !snapshot.exists()) return;
 
             Long lockPhase = snapshot.getLong("lockPhase");
+            Long startTime = snapshot.getLong("startTime");
             if (lockPhase == null) return;
 
             if (!isActivePlayer) {
+                if (lockPhase == 0 && startTime != null && !initialTimerStarted) {
+                    initialTimerStarted = true;
+                    long elapsed = System.currentTimeMillis() - startTime;
+                    int remaining = (int) (5 - (elapsed / 1000));
+                    if (remaining > 0) {
+                        sharedViewModel.startRoundTimer(remaining, () -> {
+                        });
+                    }
+                }
+
                 NumberGameViewModel.GameState state = viewModel.getGameState().getValue();
 
                 if (lockPhase >= 1 && state == NumberGameViewModel.GameState.SHUFFLE_TARGET) {
@@ -223,7 +241,7 @@ public class NumberGameFragment extends Fragment {
                 String targetStr = viewModel.getTargetNumber().getValue();
                 long targetLong = targetStr != null && !targetStr.equals("---") ? Long.parseLong(targetStr) : 0;
 
-                int points = scoringService.calculatePoints(targetLong, myResult, opponentResult, true);
+                int points = scoringService.calculatePoints(targetLong, myResult, opponentResult, isActivePlayer);
                 sharedViewModel.addCurrentPlayerPoints(points);
                 Toast.makeText(getContext(), getString(R.string.game_result_toast, myResult, points), Toast.LENGTH_LONG).show();
                 sharedViewModel.advanceGamePhase();
@@ -258,18 +276,25 @@ public class NumberGameFragment extends Fragment {
     private void submitGameResult() {
         if (viewModel.getGameState().getValue() == NumberGameViewModel.GameState.FINISHED) return;
 
-        sharedViewModel.stopTimer();
         String expr = viewModel.submitResult();
         Double result = evaluateMathExpressionUseCase.evaluate(expr);
         long resLong = result != null ? Math.round(result) : 0L;
 
         if (matchId != null) {
             numberGameRepo.submitResult(matchId, gameKey, sharedViewModel.getIsPlayer1(), resLong);
-            Toast.makeText(getContext(), "Predato! Čekanje protivnika...", Toast.LENGTH_SHORT).show();
+            TextView tvWait = getView() != null ? getView().findViewById(R.id.tvWaitingOpponent) : null;
+            if (tvWait != null) {
+                tvWait.setVisibility(View.VISIBLE);
+            }
+            View btnConfirm = getView() != null ? getView().findViewById(R.id.btnConfirmCalc) : null;
+            if(btnConfirm != null) btnConfirm.setEnabled(false);
+            View btnClearAll = getView() != null ? getView().findViewById(R.id.btnClearAll) : null;
+            if(btnClearAll != null) btnClearAll.setEnabled(false);
         } else {
             String targetStr = viewModel.getTargetNumber().getValue();
             long targetLong = targetStr != null && !targetStr.equals("---") ? Long.parseLong(targetStr) : 0;
-            int points = scoringService.calculatePoints(targetLong, resLong, 0, true);
+            int points = scoringService.calculatePoints(targetLong, resLong, 0, isActivePlayer);
+            sharedViewModel.stopTimer();
             sharedViewModel.addCurrentPlayerPoints(points);
             Toast.makeText(getContext(), getString(R.string.game_result_toast, resLong, points), Toast.LENGTH_LONG).show();
             sharedViewModel.advanceGamePhase();

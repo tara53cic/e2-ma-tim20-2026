@@ -50,7 +50,13 @@ public class MatchFragment extends Fragment {
             String matchId = getArguments().getString("MATCH_ID");
             if (matchId != null) {
                 matchViewModel.initMatch(matchId);
+            } else {
+                Navigation.findNavController(view).popBackStack();
+                return;
             }
+        } else {
+            Navigation.findNavController(view).popBackStack();
+            return;
         }
 
         matchViewModel.getTimeRemaining().observe(getViewLifecycleOwner(), time -> tvTimer.setText(String.valueOf(time)));

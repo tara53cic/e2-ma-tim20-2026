@@ -208,4 +208,18 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <TextView
+        android:id="@+id/tvWaitingOpponent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Čekanje protivnika..."
+        android:textColor="@color/secondary"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="64dp" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

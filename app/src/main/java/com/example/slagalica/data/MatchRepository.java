@@ -2,8 +2,10 @@ package com.example.slagalica.data;
 
 import com.example.slagalica.domain.models.Match;
 import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
 
@@ -45,6 +47,21 @@ public class MatchRepository {
                 .whereEqualTo("status", "WAITING")
                 .limit(10)
                 .get();
+    }
+
+    public Task<Void> deleteWaitingMatches(String userId) {
+        return db.collection("matches")
+                .whereEqualTo("player1_id", userId)
+                .whereEqualTo("status", "WAITING")
+                .get()
+                .continueWithTask(task -> {
+                    if (task.isSuccessful() && task.getResult() != null) {
+                        for (DocumentSnapshot doc : task.getResult()) {
+                            doc.getReference().delete();
+                        }
+                    }
+                    return Tasks.forResult(null);
+                });
     }
 
     public Task<Void> joinMatch(String matchId, String player2Id) {
