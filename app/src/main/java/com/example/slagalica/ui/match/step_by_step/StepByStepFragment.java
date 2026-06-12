@@ -228,9 +228,6 @@ public class StepByStepFragment extends Fragment {
                 String answer = snapshot.getString("answer");
                 int points = pts != null ? pts.intValue() : 0;
                 if (answer != null) currentAnswer = answer;
-                if (!isActivePlayer && Boolean.TRUE.equals(correct)) {
-                    sharedViewModel.addCurrentPlayerPoints(points); // award the OTHER phone
-                }
                 showAnswerAndAdvance(Boolean.TRUE.equals(correct), points);
             }
         });
