@@ -195,8 +195,6 @@ public class MatchingFragment extends Fragment {
             Boolean done = snapshot.getBoolean("roundDone");
             if (Boolean.TRUE.equals(done) && !roundDone) {
                 roundDone = true;
-                Long pts = snapshot.getLong("totalScore");
-                if (pts != null) sharedViewModel.addCurrentPlayerPoints(pts.intValue());
                 handler.postDelayed(() -> {
                     if (isAdded()) sharedViewModel.advanceGamePhase();
                 }, 1000);
