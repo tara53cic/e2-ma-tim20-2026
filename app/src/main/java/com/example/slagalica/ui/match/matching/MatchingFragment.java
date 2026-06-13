@@ -18,6 +18,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.slagalica.R;
 import com.example.slagalica.data.GameStateRepository;
+import com.example.slagalica.data.UserStatsRepository;
 import com.example.slagalica.domain.models.MatchingData;
 import com.example.slagalica.ui.match.MatchViewModel;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -33,6 +34,7 @@ public class MatchingFragment extends Fragment {
     private MatchingViewModel viewModel;
     private MatchViewModel sharedViewModel;
     private GameStateRepository gameStateRepo;
+    private final UserStatsRepository statsRepo = new UserStatsRepository();
     private ListenerRegistration gameListener;
     private ListenerRegistration dataListener;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -51,12 +53,15 @@ public class MatchingFragment extends Fragment {
     private final boolean[] starterUsed  = new boolean[5];
     private final boolean[] secondUsed   = new boolean[5];
     private final int[]     pairOwner    = new int[5];
-    private int matchedCount = 0;
+    private int matchedCount   = 0;
+    private int myMatchedCount = 0;
+    private int myPointsThisRound = 0;
 
     private boolean isRound1;
     private boolean iAmStarter;
     private boolean roundDone  = false;
     private boolean dataLoaded = false;
+    private boolean statsWritten = false;
     private String  localPhase = "";
 
     private String matchId, gameKey;
@@ -121,7 +126,6 @@ public class MatchingFragment extends Fragment {
 
     private void waitForDataAndLoad() {
         if (matchId == null) return;
-        // Sluša matching_data — čim postoji, učitaj
         dataListener = FirebaseFirestore.getInstance()
                 .collection("matches").document(matchId)
                 .collection("games").document("matching_data")
@@ -220,7 +224,8 @@ public class MatchingFragment extends Fragment {
             Boolean done = snap.getBoolean("roundDone");
             if (Boolean.TRUE.equals(done) && !roundDone) {
                 roundDone = true;
-                sharedViewModel.stopTimer(); // stopira timer na oba
+                writeStats();
+                sharedViewModel.stopTimer();
                 setAllEnabled(false);
                 handler.postDelayed(() -> {
                     if (!isAdded()) return;
@@ -281,7 +286,7 @@ public class MatchingFragment extends Fragment {
             }
             sharedViewModel.startRoundTimer(30, () -> {
                 if (!isAdded() || roundDone) return;
-                if (!iAmStarter) writeFinish(); // second istekao — završi
+                if (!iAmStarter) writeFinish();
             });
         }
     }
@@ -327,6 +332,8 @@ public class MatchingFragment extends Fragment {
             starterUsed[prevLeft]  = true;
             pairOwner[prevLeft]    = myNum;
             matchedCount++;
+            myMatchedCount++;
+            myPointsThisRound += 2;
 
             tint(leftButtons[prevLeft],  C_MINE); leftButtons[prevLeft].setEnabled(false);
             tint(rightButtons[rightIdx], C_MINE); rightButtons[rightIdx].setEnabled(false);
@@ -391,6 +398,15 @@ public class MatchingFragment extends Fragment {
         u.put("phase", "DONE");
         u.put("roundDone", true);
         gameStateRepo.update(matchId, gameKey, u);
+    }
+
+    private void writeStats() {
+        if (statsWritten) return;
+        statsWritten = true;
+        String uid = statsRepo.getCurrentUid();
+        if (uid != null) {
+            statsRepo.recordSpojnice(uid, myMatchedCount, 5, myPointsThisRound);
+        }
     }
 
     private boolean canClick() {
