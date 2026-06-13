@@ -16,4 +16,8 @@
         android:id="@+id/nav_friends"
         android:title="@string/nav_friends"
         android:icon="@drawable/ic_nav_friends"/>
+    <item
+        android:id="@+id/nav_notifications"
+        android:title="Notifikacije"
+        android:icon="@drawable/ic_nav_notifications"/>
 </menu>

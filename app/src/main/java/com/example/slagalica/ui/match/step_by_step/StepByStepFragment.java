@@ -210,7 +210,7 @@ public class StepByStepFragment extends Fragment {
         statsWritten = true;
         String uid = statsRepo.getCurrentUid();
         if (uid != null) {
-            int solvedAtStep = correct ? revealedStepCount : -1;
+            int solvedAtStep = correct ? Math.max(0, revealedStepCount - 1) : -1;
             statsRepo.recordKpk(uid, solvedAtStep, points);
         }
     }

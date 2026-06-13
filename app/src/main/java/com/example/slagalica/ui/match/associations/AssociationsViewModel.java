@@ -3,46 +3,30 @@ package com.example.slagalica.ui.match.associations;
 import androidx.lifecycle.ViewModel;
 
 public class AssociationsViewModel extends ViewModel {
+    public String[][] fields = new String[4][4];
+    public String[] columnSolutions = new String[4];
+    public String finalSolution = "";
 
-    public final String[][] fields = {
-            {"KRUNA", "DVOR", "PRESTO", "VLADAR"},
-            {"DRUŠTVO", "KARTA", "POKER", "RULET"},
-            {"KLJUČ", "KATANAC", "SEF", "LOZINKA"},
-            {"BUBANJ", "GITARA", "MIKROFON", "BINA"}
-    };
-
-    public final String[] columnSolutions = {
-            "KRALJ",
-            "IGRA",
-            "TAJNA",
-            "MUZIKA"
-    };
-
-    public final String finalSolution = "ZABAVA";
+    public boolean puzzleLoaded = false;
 
     public final boolean[][] openedFields = new boolean[4][4];
     public final boolean[] solvedColumns = new boolean[4];
 
     public int activeColumn = -1;
+    public boolean freeGuessMode = false;
+
     public int currentScore = 0;
     public int currentPlayer = 1;
-    public int player1Score = 0;
-    public int player2Score = 0;
-
-    public void addPointsToCurrentPlayer(int points) {
-        if (currentPlayer == 1) {
-            player1Score += points;
-        } else {
-            player2Score += points;
-        }
-    }
-
-    public void switchPlayer() {
-        currentPlayer = currentPlayer == 1 ? 2 : 1;
-        activeColumn = -1;
-    }
 
     public boolean finalSolved = false;
+
+
+    public void loadPuzzle(String[][] loadedFields, String[] loadedColumnSolutions, String loadedFinalSolution) {
+        fields = loadedFields;
+        columnSolutions = loadedColumnSolutions;
+        finalSolution = loadedFinalSolution;
+        puzzleLoaded = true;
+    }
 
     public boolean openField(int column, int row) {
         if (openedFields[column][row]) return false;
@@ -51,6 +35,8 @@ public class AssociationsViewModel extends ViewModel {
 
         openedFields[column][row] = true;
         activeColumn = column;
+        freeGuessMode = false;
+
         return true;
     }
 
@@ -66,12 +52,14 @@ public class AssociationsViewModel extends ViewModel {
         int points = calculateColumnPoints(column);
 
         solvedColumns[column] = true;
-        addPointsToCurrentPlayer(points);
         currentScore += points;
 
         for (int row = 0; row < 4; row++) {
             openedFields[column][row] = true;
         }
+
+        activeColumn = -1;
+        freeGuessMode = true;
 
         return points;
     }
@@ -80,7 +68,6 @@ public class AssociationsViewModel extends ViewModel {
         int points = calculateFinalPoints();
 
         finalSolved = true;
-        addPointsToCurrentPlayer(points);
         currentScore += points;
 
         for (int column = 0; column < 4; column++) {
@@ -90,6 +77,9 @@ public class AssociationsViewModel extends ViewModel {
                 openedFields[column][row] = true;
             }
         }
+
+        activeColumn = -1;
+        freeGuessMode = false;
 
         return points;
     }
@@ -136,5 +126,6 @@ public class AssociationsViewModel extends ViewModel {
 
     public void resetTurn() {
         activeColumn = -1;
+        freeGuessMode = false;
     }
 }

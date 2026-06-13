@@ -45,6 +45,9 @@ public class SkockoFragment extends Fragment {
     private int challengerInputIdx = 0;
     private boolean challengerPhaseActive = false;
 
+    private boolean mainTimerStarted = false;
+    private boolean challengerTimerStarted = false;
+
     private TextView tvRoundInfo;
     private TextView[][] cells;
     private TextView[][] results;
@@ -95,63 +98,115 @@ public class SkockoFragment extends Fragment {
         }
 
         listenToGameState();
+        disableButtons();
 
         if (isGuesser) {
             tvRoundInfo.setText("Tvoja partija – 6 pokušaja");
-            sharedViewModel.startRoundTimer(30, this::onGuesserTimerUp);
         } else {
             tvRoundInfo.setText("Protivnik igra – čeka se...");
-            disableButtons();
-            sharedViewModel.startRoundTimer(30, () -> {});
         }
     }
 
     private void listenToGameState() {
         if (matchId == null) return;
+
         gameListener = gameStateRepo.listen(matchId, gameKey, (snapshot, e) -> {
             if (e != null || snapshot == null || !snapshot.exists()) return;
 
             List<String> secret = (List<String>) snapshot.get("secretCombination");
+
             if (secret != null && secret.size() == 4) {
-                for (int i = 0; i < 4; i++) viewModel.secretCombination[i] = secret.get(i);
+                for (int i = 0; i < 4; i++) {
+                    viewModel.secretCombination[i] = secret.get(i);
+                }
             }
+
+            Boolean turnDone = snapshot.getBoolean("playerTurnDone");
+            Boolean solved = snapshot.getBoolean("playerSolved");
+            Boolean finished = snapshot.getBoolean("roundFinished");
+
+            startMainTimerIfNeeded(
+                    Boolean.TRUE.equals(turnDone),
+                    Boolean.TRUE.equals(finished)
+            );
 
             for (int row = 0; row < 6; row++) {
                 List<String> attempt = (List<String>) snapshot.get("attempt_" + row);
-                List<Long>   result  = (List<Long>)   snapshot.get("result_" + row);
+                List<Long> result = (List<Long>) snapshot.get("result_" + row);
+
                 if (attempt != null && result != null) {
                     for (int c = 0; c < 4; c++) {
                         cells[row][c].setText(attempt.get(c));
                         cells[row][c].setTextColor(Color.WHITE);
                         cells[row][c].setGravity(android.view.Gravity.CENTER);
                     }
-                    showResult(results[row], new int[]{result.get(0).intValue(), result.get(1).intValue()});
+
+                    showResult(
+                            results[row],
+                            new int[]{
+                                    result.get(0).intValue(),
+                                    result.get(1).intValue()
+                            }
+                    );
                 }
             }
 
-            Boolean turnDone = snapshot.getBoolean("playerTurnDone");
-            Boolean solved   = snapshot.getBoolean("playerSolved");
-            if (Boolean.TRUE.equals(turnDone) && !Boolean.TRUE.equals(solved)
-                    && !isGuesser && !challengerPhaseActive && !localRoundDone) {
+            if (Boolean.TRUE.equals(turnDone)
+                    && !Boolean.TRUE.equals(solved)
+                    && !isGuesser
+                    && !challengerPhaseActive
+                    && !localRoundDone) {
+
                 startChallengerPhase();
             }
 
-            List<String> cGuess  = (List<String>) snapshot.get("challengerGuess");
-            List<Long>   cResult = (List<Long>)   snapshot.get("challengerResult");
+            List<String> cGuess = (List<String>) snapshot.get("challengerGuess");
+            List<Long> cResult = (List<Long>) snapshot.get("challengerResult");
+
             if (cGuess != null && cResult != null && isGuesser && !localRoundDone) {
-                showChallengerAttemptUI(cGuess, new int[]{cResult.get(0).intValue(), cResult.get(1).intValue()});
+                showChallengerAttemptUI(
+                        cGuess,
+                        new int[]{
+                                cResult.get(0).intValue(),
+                                cResult.get(1).intValue()
+                        }
+                );
             }
 
-            Boolean finished = snapshot.getBoolean("roundFinished");
             if (Boolean.TRUE.equals(finished) && !localRoundDone) {
                 localRoundDone = true;
                 stopTimer();
                 disableButtons();
+
                 handler.postDelayed(() -> {
-                    if (isAdded()) sharedViewModel.advanceGamePhase();
+                    if (isAdded()) {
+                        sharedViewModel.advanceGamePhase();
+                    }
                 }, 1500);
             }
         });
+    }
+
+    private void startMainTimerIfNeeded(boolean playerTurnDone, boolean roundFinished) {
+        if (mainTimerStarted || localRoundDone || playerTurnDone || roundFinished) {
+            return;
+        }
+
+        mainTimerStarted = true;
+
+        sharedViewModel.stopTimer();
+        sharedViewModel.startRoundTimer(
+                30,
+                isGuesser ? this::onGuesserTimerUp : () -> {}
+        );
+
+        if (isGuesser) {
+            enableButtons();
+            tvRoundInfo.setText("Tvoja partija – 6 pokušaja");
+        } else {
+            disableButtons();
+            tvRoundInfo.setText("Protivnik igra – čeka se...");
+        }
     }
 
     private void onGuesserTimerUp() {
@@ -238,13 +293,22 @@ public class SkockoFragment extends Fragment {
     }
 
     private void startChallengerPhase() {
+        if (challengerTimerStarted || localRoundDone) {
+            return;
+        }
+
+        challengerTimerStarted = true;
         challengerPhaseActive = true;
+
         tvRoundInfo.setText("Tvoj pokušaj – 10 sekundi!");
         enableButtons();
+
         for (int i = 0; i < 4; i++) {
             opponentCells[i].setText("");
             opponentCells[i].setBackgroundTintList(ColorStateList.valueOf(COLOR_CHALLENGER));
         }
+
+        sharedViewModel.stopTimer();
         sharedViewModel.startRoundTimer(10, this::onChallengerTimerUp);
     }
 

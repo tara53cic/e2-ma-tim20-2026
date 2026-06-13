@@ -10,8 +10,12 @@ import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.NavigationUI;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.example.slagalica.data.NotificationRepository;
+import com.google.android.material.badge.BadgeDrawable;
 
 public class MainActivity extends AppCompatActivity {
+
+    private NotificationRepository notificationRepository;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,6 +30,10 @@ public class MainActivity extends AppCompatActivity {
         });
 
         BottomNavigationView navView = findViewById(R.id.bottom_nav);
+
+        notificationRepository = new NotificationRepository();
+        observeUnreadNotifications(navView);
+
         NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.nav_host_fragment_main);
 
@@ -53,5 +61,18 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             });
         }
+    }
+
+    private void observeUnreadNotifications(BottomNavigationView navView) {
+        notificationRepository.observeUnreadCount(count -> {
+            if (count > 0) {
+                BadgeDrawable badge = navView.getOrCreateBadge(R.id.nav_notifications);
+                badge.setVisible(true);
+                badge.clearNumber();
+                badge.setBackgroundColor(getColor(R.color.error));
+            } else {
+                navView.removeBadge(R.id.nav_notifications);
+            }
+        });
     }
 }

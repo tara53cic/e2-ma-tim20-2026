@@ -29,4 +29,6 @@
     <color name="divider">#E0E6ED</color>
     <color name="shadow">#1A000000</color>
 
+    <color name="text_on_card_muted">#8A1C2D3E</color>
+
 </resources>
