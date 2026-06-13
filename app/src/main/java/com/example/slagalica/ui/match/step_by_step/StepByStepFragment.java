@@ -16,6 +16,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.slagalica.R;
 import com.example.slagalica.data.GameStateRepository;
+import com.example.slagalica.data.UserStatsRepository;
 import com.example.slagalica.domain.models.StepByStep;
 import com.example.slagalica.ui.match.MatchViewModel;
 import com.google.android.material.button.MaterialButton;
@@ -32,6 +33,7 @@ public class StepByStepFragment extends Fragment {
     private MatchViewModel sharedViewModel;
     private StepByStepViewModel stepByStepViewModel;
     private GameStateRepository gameStateRepo;
+    private final UserStatsRepository statsRepo = new UserStatsRepository();
     private ListenerRegistration gameListener;
 
     private List<TextView> steps = new ArrayList<>();
@@ -45,6 +47,7 @@ public class StepByStepFragment extends Fragment {
     private int currentRevealedStep = 0;
     private boolean isOpponentPhase = false;
     private boolean roundDone = false;
+    private boolean statsWritten = false;
 
     private String matchId;
     private String gameKey;
@@ -184,6 +187,12 @@ public class StepByStepFragment extends Fragment {
         if (roundDone) return;
         roundDone = true;
         sharedViewModel.stopTimer();
+
+        if (isActivePlayer && !isOpponentPhase) {
+            writeStats(correct, currentRevealedStep, points);
+        } else if (!isActivePlayer && isOpponentPhase) {
+        }
+
         if (correct) sharedViewModel.addCurrentPlayerPoints(points);
         if (matchId != null) {
             Map<String, Object> updates = new HashMap<>();
@@ -194,6 +203,16 @@ public class StepByStepFragment extends Fragment {
             gameStateRepo.update(matchId, gameKey, updates);
         }
         showAnswerAndAdvance(correct, points);
+    }
+
+    private void writeStats(boolean correct, int revealedStepCount, int points) {
+        if (statsWritten) return;
+        statsWritten = true;
+        String uid = statsRepo.getCurrentUid();
+        if (uid != null) {
+            int solvedAtStep = correct ? revealedStepCount : -1;
+            statsRepo.recordKpk(uid, solvedAtStep, points);
+        }
     }
 
     private void listenToGameState() {
@@ -217,6 +236,12 @@ public class StepByStepFragment extends Fragment {
                 if (tvTurnIndicator != null) {
                     tvTurnIndicator.setText("Vi ste na potezu");
                 }
+                sharedViewModel.startRoundTimer(10, () -> {
+                    if (!roundDone && isAdded()) {
+                        etStepAnswer.setEnabled(false);
+                        btnConfirmStep.setEnabled(false);
+                    }
+                });
             }
 
             if ("DONE".equals(phase)) {
@@ -228,9 +253,6 @@ public class StepByStepFragment extends Fragment {
                 String answer = snapshot.getString("answer");
                 int points = pts != null ? pts.intValue() : 0;
                 if (answer != null) currentAnswer = answer;
-                if (!isActivePlayer && Boolean.TRUE.equals(correct)) {
-                    sharedViewModel.addCurrentPlayerPoints(points); // award the OTHER phone
-                }
                 showAnswerAndAdvance(Boolean.TRUE.equals(correct), points);
             }
         });

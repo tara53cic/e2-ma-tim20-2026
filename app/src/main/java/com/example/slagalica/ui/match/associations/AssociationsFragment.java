@@ -20,6 +20,7 @@ import androidx.lifecycle.ViewModelProvider;
 import com.example.slagalica.R;
 import com.example.slagalica.data.GameStateRepository;
 import com.example.slagalica.data.AssociationsRepository;
+import com.example.slagalica.data.UserStatsRepository;
 import com.example.slagalica.ui.match.MatchViewModel;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -36,6 +37,9 @@ public class AssociationsFragment extends Fragment {
 
     private GameStateRepository gameStateRepo;
     private AssociationsRepository associationRepo;
+
+    private final UserStatsRepository statsRepo = new UserStatsRepository();
+
     private ListenerRegistration gameListener;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -53,6 +57,7 @@ public class AssociationsFragment extends Fragment {
     private String gameKey;
 
     private boolean localRoundOver = false;
+    private boolean statsWritten   = false;
     private boolean timerStarted = false;
     private boolean advanceCalled = false;
 
@@ -581,6 +586,8 @@ public class AssociationsFragment extends Fragment {
         localRoundOver = true;
         sharedViewModel.stopTimer();
 
+        writeStats();
+
         sharedViewModel.addCurrentPlayerPoints(associationsViewModel.currentScore);
 
         if (matchId != null) {
@@ -590,6 +597,16 @@ public class AssociationsFragment extends Fragment {
             gameStateRepo.update(matchId, gameKey, updates);
         } else {
             doAdvance();
+        }
+    }
+
+    private void writeStats() {
+        if (statsWritten) return;
+        statsWritten = true;
+        String uid = statsRepo.getCurrentUid();
+        if (uid != null) {
+            boolean solved = associationsViewModel.finalSolved || (associationsViewModel.currentScore > 0);
+            statsRepo.recordAsocijacije(uid, solved, associationsViewModel.currentScore);
         }
     }
 

@@ -84,7 +84,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="0"
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/secondary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -523,6 +523,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="20dp">
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -531,6 +532,7 @@
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="12dp" />
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -538,87 +540,144 @@
                     android:textColor="@color/text_on_card"
                     android:textSize="13sp"
                     android:layout_marginBottom="4dp" />
-
                 <TextView
                     android:id="@+id/tvSkockoAvg"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="0 - 0"
+                    android:text="0 (0 - 20)"
                     android:textColor="@color/secondary"
                     android:textSize="15sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="16dp" />
 
-
-
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Pogođenih"
+                    android:text="Pogođeno po pokušaju"
                     android:textColor="@color/text_on_card"
                     android:textSize="13sp"
-                    android:layout_marginBottom="6dp" />
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="14dp">
-                    <ProgressBar
-                        android:id="@+id/pbSkockoRate"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="10dp" />
+
+                <!-- Pokušaj 1 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                    <TextView android:layout_width="56dp" android:layout_height="wrap_content"
+                        android:text="1. pok." android:textColor="@color/text_on_card" android:textSize="12sp" />
+                    <ProgressBar android:id="@+id/pbSkockoAt0"
                         style="@android:style/Widget.ProgressBar.Horizontal"
-                        android:layout_width="0dp"
-                        android:layout_height="12dp"
-                        android:layout_weight="1"
-                        android:progress="0"
-                        android:max="100"
-                        android:progressTint="@color/success"
-                        android:progressBackgroundTint="@color/divider"
-                        android:layout_marginEnd="10dp" />
-                    <TextView
-                        android:id="@+id/tvSkockoRate"
-                        android:layout_width="36dp"
-                        android:layout_height="wrap_content"
-                        android:text="0%"
-                        android:textColor="@color/success"
-                        android:textSize="13sp"
-                        android:textStyle="bold"
-                        android:gravity="end" />
+                        android:layout_width="0dp" android:layout_height="10dp" android:layout_weight="1"
+                        android:progress="0" android:max="100"
+                        android:progressTint="@color/success" android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="8dp" />
+                    <TextView android:id="@+id/tvSkockoAt0"
+                        android:layout_width="36dp" android:layout_height="wrap_content"
+                        android:text="0%" android:textColor="@color/success"
+                        android:textSize="12sp" android:textStyle="bold" android:gravity="end" />
                 </LinearLayout>
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Nepogođenih"
-                    android:textColor="@color/text_on_card"
-                    android:textSize="13sp"
-                    android:layout_marginBottom="6dp" />
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-                    <ProgressBar
-                        android:id="@+id/pbSkockoFail"
+                <!-- Pokušaj 2 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                    <TextView android:layout_width="56dp" android:layout_height="wrap_content"
+                        android:text="2. pok." android:textColor="@color/text_on_card" android:textSize="12sp" />
+                    <ProgressBar android:id="@+id/pbSkockoAt1"
                         style="@android:style/Widget.ProgressBar.Horizontal"
-                        android:layout_width="0dp"
-                        android:layout_height="12dp"
-                        android:layout_weight="1"
-                        android:progress="0"
-                        android:max="100"
-                        android:progressTint="@color/error"
-                        android:progressBackgroundTint="@color/divider"
-                        android:layout_marginEnd="10dp" />
-                    <TextView
-                        android:id="@+id/tvSkockoFail"
-                        android:layout_width="36dp"
-                        android:layout_height="wrap_content"
-                        android:text="0%"
-                        android:textColor="@color/error"
-                        android:textSize="13sp"
-                        android:textStyle="bold"
-                        android:gravity="end" />
+                        android:layout_width="0dp" android:layout_height="10dp" android:layout_weight="1"
+                        android:progress="0" android:max="100"
+                        android:progressTint="@color/success" android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="8dp" />
+                    <TextView android:id="@+id/tvSkockoAt1"
+                        android:layout_width="36dp" android:layout_height="wrap_content"
+                        android:text="0%" android:textColor="@color/success"
+                        android:textSize="12sp" android:textStyle="bold" android:gravity="end" />
                 </LinearLayout>
+
+                <!-- Pokušaj 3 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                    <TextView android:layout_width="56dp" android:layout_height="wrap_content"
+                        android:text="3. pok." android:textColor="@color/text_on_card" android:textSize="12sp" />
+                    <ProgressBar android:id="@+id/pbSkockoAt2"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp" android:layout_height="10dp" android:layout_weight="1"
+                        android:progress="0" android:max="100"
+                        android:progressTint="#F4A261" android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="8dp" />
+                    <TextView android:id="@+id/tvSkockoAt2"
+                        android:layout_width="36dp" android:layout_height="wrap_content"
+                        android:text="0%" android:textColor="#F4A261"
+                        android:textSize="12sp" android:textStyle="bold" android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Pokušaj 4 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                    <TextView android:layout_width="56dp" android:layout_height="wrap_content"
+                        android:text="4. pok." android:textColor="@color/text_on_card" android:textSize="12sp" />
+                    <ProgressBar android:id="@+id/pbSkockoAt3"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp" android:layout_height="10dp" android:layout_weight="1"
+                        android:progress="0" android:max="100"
+                        android:progressTint="#F4A261" android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="8dp" />
+                    <TextView android:id="@+id/tvSkockoAt3"
+                        android:layout_width="36dp" android:layout_height="wrap_content"
+                        android:text="0%" android:textColor="#F4A261"
+                        android:textSize="12sp" android:textStyle="bold" android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Pokušaj 5 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                    <TextView android:layout_width="56dp" android:layout_height="wrap_content"
+                        android:text="5. pok." android:textColor="@color/text_on_card" android:textSize="12sp" />
+                    <ProgressBar android:id="@+id/pbSkockoAt4"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp" android:layout_height="10dp" android:layout_weight="1"
+                        android:progress="0" android:max="100"
+                        android:progressTint="@color/error" android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="8dp" />
+                    <TextView android:id="@+id/tvSkockoAt4"
+                        android:layout_width="36dp" android:layout_height="wrap_content"
+                        android:text="0%" android:textColor="@color/error"
+                        android:textSize="12sp" android:textStyle="bold" android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Pokušaj 6 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="10dp">
+                    <TextView android:layout_width="56dp" android:layout_height="wrap_content"
+                        android:text="6. pok." android:textColor="@color/text_on_card" android:textSize="12sp" />
+                    <ProgressBar android:id="@+id/pbSkockoAt5"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp" android:layout_height="10dp" android:layout_weight="1"
+                        android:progress="0" android:max="100"
+                        android:progressTint="@color/error" android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="8dp" />
+                    <TextView android:id="@+id/tvSkockoAt5"
+                        android:layout_width="36dp" android:layout_height="wrap_content"
+                        android:text="0%" android:textColor="@color/error"
+                        android:textSize="12sp" android:textStyle="bold" android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Nije pogodio -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <TextView android:layout_width="56dp" android:layout_height="wrap_content"
+                        android:text="Nije" android:textColor="@color/text_on_card" android:textSize="12sp" />
+                    <ProgressBar android:id="@+id/pbSkockoFail"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp" android:layout_height="10dp" android:layout_weight="1"
+                        android:progress="0" android:max="100"
+                        android:progressTint="@color/error" android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="8dp" />
+                    <TextView android:id="@+id/tvSkockoFail"
+                        android:layout_width="36dp" android:layout_height="wrap_content"
+                        android:text="0%" android:textColor="@color/error"
+                        android:textSize="12sp" android:textStyle="bold" android:gravity="end" />
+                </LinearLayout>
+
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
@@ -635,6 +694,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="20dp">
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -643,6 +703,7 @@
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="12dp" />
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -650,87 +711,161 @@
                     android:textColor="@color/text_on_card"
                     android:textSize="13sp"
                     android:layout_marginBottom="4dp" />
-
                 <TextView
                     android:id="@+id/tvKpkAvg"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="0 - 0"
+                    android:text="0 (0 - 20)"
                     android:textColor="@color/secondary"
                     android:textSize="15sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="16dp" />
 
-
-
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Pogođeno"
+                    android:text="Pogođeno po koraku"
                     android:textColor="@color/text_on_card"
                     android:textSize="13sp"
-                    android:layout_marginBottom="6dp" />
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="14dp">
-                    <ProgressBar
-                        android:id="@+id/pbKpkRate"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="10dp" />
+
+                <!-- Korak 1 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                    <TextView android:layout_width="56dp" android:layout_height="wrap_content"
+                        android:text="Korak 1" android:textColor="@color/text_on_card" android:textSize="12sp" />
+                    <ProgressBar android:id="@+id/pbKpkAt0"
                         style="@android:style/Widget.ProgressBar.Horizontal"
-                        android:layout_width="0dp"
-                        android:layout_height="12dp"
-                        android:layout_weight="1"
-                        android:progress="0"
-                        android:max="100"
-                        android:progressTint="@color/success"
-                        android:progressBackgroundTint="@color/divider"
-                        android:layout_marginEnd="10dp" />
-                    <TextView
-                        android:id="@+id/tvKpkRate"
-                        android:layout_width="36dp"
-                        android:layout_height="wrap_content"
-                        android:text="0%"
-                        android:textColor="@color/success"
-                        android:textSize="13sp"
-                        android:textStyle="bold"
-                        android:gravity="end" />
+                        android:layout_width="0dp" android:layout_height="10dp" android:layout_weight="1"
+                        android:progress="0" android:max="100"
+                        android:progressTint="@color/success" android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="8dp" />
+                    <TextView android:id="@+id/tvKpkAt0"
+                        android:layout_width="36dp" android:layout_height="wrap_content"
+                        android:text="0%" android:textColor="@color/success"
+                        android:textSize="12sp" android:textStyle="bold" android:gravity="end" />
                 </LinearLayout>
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Nije pogođeno"
-                    android:textColor="@color/text_on_card"
-                    android:textSize="13sp"
-                    android:layout_marginBottom="6dp" />
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-                    <ProgressBar
-                        android:id="@+id/pbKpkFail"
+                <!-- Korak 2 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                    <TextView android:layout_width="56dp" android:layout_height="wrap_content"
+                        android:text="Korak 2" android:textColor="@color/text_on_card" android:textSize="12sp" />
+                    <ProgressBar android:id="@+id/pbKpkAt1"
                         style="@android:style/Widget.ProgressBar.Horizontal"
-                        android:layout_width="0dp"
-                        android:layout_height="12dp"
-                        android:layout_weight="1"
-                        android:progress="0"
-                        android:max="100"
-                        android:progressTint="@color/error"
-                        android:progressBackgroundTint="@color/divider"
-                        android:layout_marginEnd="10dp" />
-                    <TextView
-                        android:id="@+id/tvKpkFail"
-                        android:layout_width="36dp"
-                        android:layout_height="wrap_content"
-                        android:text="0%"
-                        android:textColor="@color/error"
-                        android:textSize="13sp"
-                        android:textStyle="bold"
-                        android:gravity="end" />
+                        android:layout_width="0dp" android:layout_height="10dp" android:layout_weight="1"
+                        android:progress="0" android:max="100"
+                        android:progressTint="@color/success" android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="8dp" />
+                    <TextView android:id="@+id/tvKpkAt1"
+                        android:layout_width="36dp" android:layout_height="wrap_content"
+                        android:text="0%" android:textColor="@color/success"
+                        android:textSize="12sp" android:textStyle="bold" android:gravity="end" />
                 </LinearLayout>
+
+                <!-- Korak 3 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                    <TextView android:layout_width="56dp" android:layout_height="wrap_content"
+                        android:text="Korak 3" android:textColor="@color/text_on_card" android:textSize="12sp" />
+                    <ProgressBar android:id="@+id/pbKpkAt2"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp" android:layout_height="10dp" android:layout_weight="1"
+                        android:progress="0" android:max="100"
+                        android:progressTint="@color/success" android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="8dp" />
+                    <TextView android:id="@+id/tvKpkAt2"
+                        android:layout_width="36dp" android:layout_height="wrap_content"
+                        android:text="0%" android:textColor="@color/success"
+                        android:textSize="12sp" android:textStyle="bold" android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Korak 4 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                    <TextView android:layout_width="56dp" android:layout_height="wrap_content"
+                        android:text="Korak 4" android:textColor="@color/text_on_card" android:textSize="12sp" />
+                    <ProgressBar android:id="@+id/pbKpkAt3"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp" android:layout_height="10dp" android:layout_weight="1"
+                        android:progress="0" android:max="100"
+                        android:progressTint="#F4A261" android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="8dp" />
+                    <TextView android:id="@+id/tvKpkAt3"
+                        android:layout_width="36dp" android:layout_height="wrap_content"
+                        android:text="0%" android:textColor="#F4A261"
+                        android:textSize="12sp" android:textStyle="bold" android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Korak 5 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                    <TextView android:layout_width="56dp" android:layout_height="wrap_content"
+                        android:text="Korak 5" android:textColor="@color/text_on_card" android:textSize="12sp" />
+                    <ProgressBar android:id="@+id/pbKpkAt4"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp" android:layout_height="10dp" android:layout_weight="1"
+                        android:progress="0" android:max="100"
+                        android:progressTint="#F4A261" android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="8dp" />
+                    <TextView android:id="@+id/tvKpkAt4"
+                        android:layout_width="36dp" android:layout_height="wrap_content"
+                        android:text="0%" android:textColor="#F4A261"
+                        android:textSize="12sp" android:textStyle="bold" android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Korak 6 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                    <TextView android:layout_width="56dp" android:layout_height="wrap_content"
+                        android:text="Korak 6" android:textColor="@color/text_on_card" android:textSize="12sp" />
+                    <ProgressBar android:id="@+id/pbKpkAt5"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp" android:layout_height="10dp" android:layout_weight="1"
+                        android:progress="0" android:max="100"
+                        android:progressTint="@color/error" android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="8dp" />
+                    <TextView android:id="@+id/tvKpkAt5"
+                        android:layout_width="36dp" android:layout_height="wrap_content"
+                        android:text="0%" android:textColor="@color/error"
+                        android:textSize="12sp" android:textStyle="bold" android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Korak 7 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="10dp">
+                    <TextView android:layout_width="56dp" android:layout_height="wrap_content"
+                        android:text="Korak 7" android:textColor="@color/text_on_card" android:textSize="12sp" />
+                    <ProgressBar android:id="@+id/pbKpkAt6"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp" android:layout_height="10dp" android:layout_weight="1"
+                        android:progress="0" android:max="100"
+                        android:progressTint="@color/error" android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="8dp" />
+                    <TextView android:id="@+id/tvKpkAt6"
+                        android:layout_width="36dp" android:layout_height="wrap_content"
+                        android:text="0%" android:textColor="@color/error"
+                        android:textSize="12sp" android:textStyle="bold" android:gravity="end" />
+                </LinearLayout>
+
+                <!-- Nije pogodio -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <TextView android:layout_width="56dp" android:layout_height="wrap_content"
+                        android:text="Nije" android:textColor="@color/text_on_card" android:textSize="12sp" />
+                    <ProgressBar android:id="@+id/pbKpkFail"
+                        style="@android:style/Widget.ProgressBar.Horizontal"
+                        android:layout_width="0dp" android:layout_height="10dp" android:layout_weight="1"
+                        android:progress="0" android:max="100"
+                        android:progressTint="@color/error" android:progressBackgroundTint="@color/divider"
+                        android:layout_marginEnd="8dp" />
+                    <TextView android:id="@+id/tvKpkFail"
+                        android:layout_width="36dp" android:layout_height="wrap_content"
+                        android:text="0%" android:textColor="@color/error"
+                        android:textSize="12sp" android:textStyle="bold" android:gravity="end" />
+                </LinearLayout>
+
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 

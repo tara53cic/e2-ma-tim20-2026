@@ -13,6 +13,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.slagalica.R;
+import com.example.slagalica.data.UserStatsRepository;
 import com.example.slagalica.ui.auth.AuthActivity;
 import com.example.slagalica.ui.match.MatchViewModel;
 import com.google.android.material.button.MaterialButton;
@@ -24,6 +25,7 @@ public class MatchResultFragment extends Fragment {
 
     private MatchViewModel sharedViewModel;
     private MatchResultViewModel resultViewModel;
+    private final UserStatsRepository statsRepo = new UserStatsRepository();
 
     @Nullable
     @Override
@@ -57,6 +59,11 @@ public class MatchResultFragment extends Fragment {
                 tvResultInfo.setText(result.isWinner ? "Pobedili ste!" : "Izgubili ste!");
                 tvStarsWon.setText((result.totalStarsChange > 0 ? "+" : "") + result.totalStarsChange);
                 tvTokensWon.setText("+" + result.tokensAdded);
+
+                String uid = statsRepo.getCurrentUid();
+                if (uid != null) {
+                    statsRepo.recordMatchResult(uid, result.isWinner);
+                }
             }
         });
 

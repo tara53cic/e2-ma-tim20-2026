@@ -19,6 +19,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.slagalica.R;
 import com.example.slagalica.data.GameStateRepository;
+import com.example.slagalica.data.UserStatsRepository;
 import com.example.slagalica.ui.match.MatchViewModel;
 import com.google.firebase.firestore.ListenerRegistration;
 
@@ -32,11 +33,13 @@ public class SkockoFragment extends Fragment {
     private SkockoViewModel viewModel;
     private MatchViewModel sharedViewModel;
     private GameStateRepository gameStateRepo;
+    private final UserStatsRepository statsRepo = new UserStatsRepository();
     private ListenerRegistration gameListener;
 
     private String matchId, gameKey;
     private boolean isGuesser;
     private boolean localRoundDone = false;
+    private boolean statsWritten   = false;
 
     private final String[] challengerInput = new String[4];
     private int challengerInputIdx = 0;
@@ -104,7 +107,6 @@ public class SkockoFragment extends Fragment {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private void listenToGameState() {
         if (matchId == null) return;
 
@@ -212,6 +214,7 @@ public class SkockoFragment extends Fragment {
         viewModel.playerTurnFinished = true;
         disableButtons();
         tvRoundInfo.setText("Vreme isteklo! Protivnik ima 10 sekundi.");
+        writeGuesserStats(false, -1, 0);
         writeGuesserTurnDone(false);
     }
 
@@ -246,6 +249,7 @@ public class SkockoFragment extends Fragment {
             tvRoundInfo.setText("Pogodio/la si! +" + points + " bodova");
             disableButtons();
             stopTimer();
+            writeGuesserStats(true, viewModel.currentAttempt, points);
             sharedViewModel.addCurrentPlayerPoints(points);
             if (matchId != null) {
                 Map<String, Object> updates = new HashMap<>();
@@ -266,7 +270,17 @@ public class SkockoFragment extends Fragment {
             disableButtons();
             stopTimer();
             tvRoundInfo.setText("Nisi pogodio/la. Protivnik ima 10 sekundi.");
+            writeGuesserStats(false, -1, 0);
             writeGuesserTurnDone(false);
+        }
+    }
+
+    private void writeGuesserStats(boolean solved, int solvedAtAttempt, int points) {
+        if (statsWritten || !isGuesser) return;
+        statsWritten = true;
+        String uid = statsRepo.getCurrentUid();
+        if (uid != null) {
+            statsRepo.recordSkocko(uid, solvedAtAttempt, points);
         }
     }
 

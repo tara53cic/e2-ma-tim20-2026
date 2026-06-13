@@ -20,11 +20,12 @@ public class NumberGameRepository {
                  .collection("games").document(gameKey);
     }
 
-    public Task<Void> initRound(String matchId, String gameKey) {
+    public Task<Void> initRound(String matchId, String gameKey, long startTime) {
         Map<String, Object> data = new HashMap<>();
         data.put("targetNumber", "---");
         for (int i = 0; i < 6; i++) data.put("num" + i, "");
         data.put("lockPhase", 0);
+        data.put("startTime", startTime);
         return gameDoc(matchId, gameKey).set(data);
     }
 
