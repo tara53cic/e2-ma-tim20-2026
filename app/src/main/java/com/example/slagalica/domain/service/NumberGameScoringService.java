@@ -3,6 +3,9 @@ package com.example.slagalica.domain.service;
 public class NumberGameScoringService {
 
     public int calculatePoints(long target, long myResult, long opponentResult, boolean isMyRound) {
+        if (myResult == target && opponentResult == target) {
+            return isMyRound ? 10 : 0;
+        }
         if (myResult == target) {
             return 10;
         }
