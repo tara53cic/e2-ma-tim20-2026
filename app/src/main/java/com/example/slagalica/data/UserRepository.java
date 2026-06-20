@@ -57,13 +57,18 @@ public class UserRepository {
                     String lastReset = doc.getString("lastResetMonth");
 
                     if (lastReset == null || !lastReset.equals(currentMonth)) {
-                        // Novi mjesec — resetuj monthlyStars
                         Map<String, Object> updates = new HashMap<>();
                         updates.put("monthlyStars", 0);
                         updates.put("lastResetMonth", currentMonth);
                         db.collection("users").document(uid).update(updates);
                     }
                 });
+    }
+
+    public void setInGame(boolean inGame) {
+        String uid = auth.getUid();
+        if (uid == null) return;
+        db.collection("users").document(uid).update("inGame", inGame);
     }
 
     private String getCurrentMonth() {

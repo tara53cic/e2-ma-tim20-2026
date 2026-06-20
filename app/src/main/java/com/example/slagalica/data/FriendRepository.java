@@ -27,8 +27,11 @@ public class FriendRepository {
     }
 
     public Task<QuerySnapshot> searchByUsername(String username) {
+        String end = username.substring(0, username.length() - 1)
+                + (char)(username.charAt(username.length() - 1) + 1);
         return db.collection("users")
-                .whereEqualTo("username", username)
+                .whereGreaterThanOrEqualTo("username", username)
+                .whereLessThan("username", end)
                 .limit(10)
                 .get();
     }

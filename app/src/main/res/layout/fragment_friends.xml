@@ -16,6 +16,19 @@
         android:textStyle="bold"
         android:layout_marginBottom="12dp"/>
 
+    <!-- QR skeniranje -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnScanQr"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="📷 Skeniraj QR kod prijatelja"
+        android:textAllCaps="false"
+        android:textColor="@color/secondary"
+        app:strokeColor="@color/secondary"
+        app:cornerRadius="12dp"
+        android:layout_marginBottom="12dp"/>
+
     <!-- Pretraga -->
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"

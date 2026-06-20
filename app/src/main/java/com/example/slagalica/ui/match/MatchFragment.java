@@ -136,6 +136,7 @@ public class MatchFragment extends Fragment {
 
         if (savedInstanceState == null) {
             userRepository.deductTokens(5);
+            userRepository.setInGame(true);
         }
 
         View bottomNav = requireActivity().findViewById(R.id.bottom_nav);
@@ -145,6 +146,7 @@ public class MatchFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        userRepository.setInGame(false);
         View bottomNav = requireActivity().findViewById(R.id.bottom_nav);
         if (bottomNav != null) bottomNav.setVisibility(View.VISIBLE);
     }

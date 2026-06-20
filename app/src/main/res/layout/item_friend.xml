@@ -9,7 +9,6 @@
     android:layout_marginBottom="8dp"
     android:gravity="center_vertical">
 
-    <!-- Avatar -->
     <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/ivFriendAvatar"
         android:layout_width="48dp"
@@ -18,7 +17,6 @@
         app:shapeAppearanceOverlay="@style/CircleImageView"
         android:layout_marginEnd="12dp"/>
 
-    <!-- Info -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -40,10 +38,32 @@
             android:gravity="center_vertical"
             android:layout_marginTop="2dp">
 
+            <TextView
+                android:id="@+id/tvFriendOnlineStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="11sp"/>
+
+            <TextView
+                android:id="@+id/tvFriendMonthlyRank"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="11sp"
+                android:textColor="@color/warning"
+                android:layout_marginStart="8dp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="2dp">
+
             <ImageView
                 android:id="@+id/ivFriendLeague"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
                 android:layout_marginEnd="4dp"/>
 
             <TextView
@@ -55,12 +75,6 @@
                 android:layout_marginEnd="8dp"/>
 
             <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="⭐ "
-                android:textSize="12sp"/>
-
-            <TextView
                 android:id="@+id/tvFriendStars"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -69,13 +83,25 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Action button -->
+    <!-- Dugme za igru — vidljivo samo u listi prijatelja -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnFriendPlay"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="▶"
+        android:textSize="12sp"
+        android:layout_marginEnd="4dp"
+        app:cornerRadius="8dp"
+        app:backgroundTint="@color/secondary"
+        android:visibility="gone"/>
+
+    <!-- Dugme dodaj/ukloni -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnFriendAction"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Dodaj"
-        android:textSize="12sp"
+        android:textSize="11sp"
         app:cornerRadius="8dp"
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         app:strokeColor="@color/secondary"/>

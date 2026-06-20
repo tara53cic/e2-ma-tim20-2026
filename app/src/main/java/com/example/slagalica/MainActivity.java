@@ -18,6 +18,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 public class MainActivity extends AppCompatActivity {
 
     private NotificationRepository notificationRepository;
+    private IncomingRequestManager incomingRequestManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,6 +67,9 @@ public class MainActivity extends AppCompatActivity {
 
         setOnlineStatus(true);
 
+        incomingRequestManager = new IncomingRequestManager(this);
+        incomingRequestManager.start();
+
         String uid = FirebaseAuth.getInstance().getUid();
         if (uid != null) {
             new com.example.slagalica.domain.service.DailyTokenService()
@@ -97,13 +101,17 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         setOnlineStatus(false);
+        if (incomingRequestManager != null) incomingRequestManager.stop();
     }
 
     private void setOnlineStatus(boolean online) {
         String uid = FirebaseAuth.getInstance().getUid();
         if (uid == null) return;
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("online", online);
+        data.put("inGame", false);
         FirebaseFirestore.getInstance().collection("users").document(uid)
-                .update("online", online);
+                .set(data, com.google.firebase.firestore.SetOptions.merge());
     }
 
     private void observeUnreadNotifications(BottomNavigationView navView) {
