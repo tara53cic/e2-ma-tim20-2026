@@ -1,10 +1,12 @@
 package com.example.slagalica.ui.match;
 
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -20,8 +22,20 @@ import com.example.slagalica.ui.match.skocko.SkockoFragment;
 import com.example.slagalica.ui.match.step_by_step.StepByStepFragment;
 import com.example.slagalica.ui.match.who_knows.WhoKnowsFragment;
 import com.example.slagalica.ui.match.matching.MatchingFragment;
+import com.google.android.material.imageview.ShapeableImageView;
 
 public class MatchFragment extends Fragment {
+
+    private static final int[] AVATAR_ICONS = {
+            R.drawable.ic_avatar_1, R.drawable.ic_avatar_2,
+            R.drawable.ic_avatar_3, R.drawable.ic_avatar_4,
+            R.drawable.ic_avatar_5, R.drawable.ic_avatar_6
+    };
+
+    private static final int[] AVATAR_COLORS = {
+            0xFF508EFA, 0xFF2EC27E, 0xFFE53935,
+            0xFFF4A261, 0xFF9C27B0, 0xFF00BCD4
+    };
 
     private MatchViewModel matchViewModel;
     private UserRepository userRepository;
@@ -38,11 +52,13 @@ public class MatchFragment extends Fragment {
 
         userRepository = new UserRepository();
 
-        TextView tvTimer = view.findViewById(R.id.tvTimer);
+        TextView tvTimer        = view.findViewById(R.id.tvTimer);
         TextView tvPlayer1Score = view.findViewById(R.id.tvPlayer1Score);
         TextView tvPlayer2Score = view.findViewById(R.id.tvPlayer2Score);
-        TextView tvPlayer1Name = view.findViewById(R.id.tvPlayer1Name);
-        TextView tvPlayer2Name = view.findViewById(R.id.tvPlayer2Name);
+        TextView tvPlayer1Name  = view.findViewById(R.id.tvPlayer1Name);
+        TextView tvPlayer2Name  = view.findViewById(R.id.tvPlayer2Name);
+        ShapeableImageView ivPlayer1Avatar = view.findViewById(R.id.ivPlayer1Avatar);
+        ShapeableImageView ivPlayer2Avatar = view.findViewById(R.id.ivPlayer2Avatar);
 
         matchViewModel = new ViewModelProvider(requireActivity()).get(MatchViewModel.class);
 
@@ -59,13 +75,31 @@ public class MatchFragment extends Fragment {
             return;
         }
 
-        matchViewModel.getTimeRemaining().observe(getViewLifecycleOwner(), time -> tvTimer.setText(String.valueOf(time)));
+        matchViewModel.getTimeRemaining().observe(getViewLifecycleOwner(),
+                time -> tvTimer.setText(String.valueOf(time)));
 
-        matchViewModel.getPlayer1Score().observe(getViewLifecycleOwner(), score -> tvPlayer1Score.setText(String.valueOf(score)));
-        matchViewModel.getPlayer2Score().observe(getViewLifecycleOwner(), score -> tvPlayer2Score.setText(String.valueOf(score)));
+        matchViewModel.getPlayer1Score().observe(getViewLifecycleOwner(),
+                score -> tvPlayer1Score.setText(String.valueOf(score)));
+        matchViewModel.getPlayer2Score().observe(getViewLifecycleOwner(),
+                score -> tvPlayer2Score.setText(String.valueOf(score)));
 
         matchViewModel.getPlayer1Name().observe(getViewLifecycleOwner(), tvPlayer1Name::setText);
         matchViewModel.getPlayer2Name().observe(getViewLifecycleOwner(), tvPlayer2Name::setText);
+
+        // Avatari
+        matchViewModel.getPlayer1AvatarIndex().observe(getViewLifecycleOwner(), idx -> {
+            if (idx == null) return;
+            int i = Math.max(0, Math.min(idx, AVATAR_ICONS.length - 1));
+            ivPlayer1Avatar.setImageResource(AVATAR_ICONS[i]);
+            ivPlayer1Avatar.setBackgroundTintList(ColorStateList.valueOf(AVATAR_COLORS[i]));
+        });
+
+        matchViewModel.getPlayer2AvatarIndex().observe(getViewLifecycleOwner(), idx -> {
+            if (idx == null) return;
+            int i = Math.max(0, Math.min(idx, AVATAR_ICONS.length - 1));
+            ivPlayer2Avatar.setImageResource(AVATAR_ICONS[i]);
+            ivPlayer2Avatar.setBackgroundTintList(ColorStateList.valueOf(AVATAR_COLORS[i]));
+        });
 
         View waitingOverlay = view.findViewById(R.id.waitingOverlay);
 
@@ -81,14 +115,11 @@ public class MatchFragment extends Fragment {
                 fragment = new WhoKnowsFragment();
             } else if ("SPOJNICE_R1".equals(fragmentName) || "SPOJNICE_R2".equals(fragmentName)) {
                 fragment = new MatchingFragment();
-
-            }
-            else if ("ASOCIJACIJE_R1".equals(fragmentName) || "ASOCIJACIJE_R2".equals(fragmentName)) {
+            } else if ("ASOCIJACIJE_R1".equals(fragmentName) || "ASOCIJACIJE_R2".equals(fragmentName)) {
                 fragment = new AssociationsFragment();
             } else if ("SKOCKO_R1".equals(fragmentName) || "SKOCKO_R2".equals(fragmentName)) {
-                fragment = new SkockoFragment();}
-
-            else if ("MOJ_BROJ_R1".equals(fragmentName) || "MOJ_BROJ_R2".equals(fragmentName)) {
+                fragment = new SkockoFragment();
+            } else if ("MOJ_BROJ_R1".equals(fragmentName) || "MOJ_BROJ_R2".equals(fragmentName)) {
                 fragment = new NumberGameFragment();
             } else if (fragmentName != null && fragmentName.startsWith("KORAK_PO_KORAK")) {
                 fragment = new StepByStepFragment();
@@ -108,17 +139,13 @@ public class MatchFragment extends Fragment {
         }
 
         View bottomNav = requireActivity().findViewById(R.id.bottom_nav);
-        if (bottomNav != null) {
-            bottomNav.setVisibility(View.GONE);
-        }
+        if (bottomNav != null) bottomNav.setVisibility(View.GONE);
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         View bottomNav = requireActivity().findViewById(R.id.bottom_nav);
-        if (bottomNav != null) {
-            bottomNav.setVisibility(View.VISIBLE);
-        }
+        if (bottomNav != null) bottomNav.setVisibility(View.VISIBLE);
     }
 }

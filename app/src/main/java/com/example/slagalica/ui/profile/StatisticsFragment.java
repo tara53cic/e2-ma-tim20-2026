@@ -1,4 +1,4 @@
-package com.example.slagalica.ui.home;
+package com.example.slagalica.ui.profile;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -15,7 +15,6 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.slagalica.R;
 import com.example.slagalica.domain.models.UserGameStats;
-import com.example.slagalica.ui.home.StatisticsViewModel;
 
 public class StatisticsFragment extends Fragment {
 

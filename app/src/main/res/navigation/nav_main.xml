@@ -15,7 +15,7 @@
 
     <fragment
         android:id="@+id/nav_profile"
-        android:name="com.example.slagalica.ui.home.ProfileFragment"
+        android:name="com.example.slagalica.ui.profile.ProfileFragment"
         android:label="Profile">
         <action
             android:id="@+id/action_nav_profile_to_resetPasswordFragment"
@@ -24,13 +24,23 @@
 
     <fragment
         android:id="@+id/nav_statistics"
-        android:name="com.example.slagalica.ui.home.StatisticsFragment"
+        android:name="com.example.slagalica.ui.profile.StatisticsFragment"
         android:label="Statistics" />
+
+    <fragment
+        android:id="@+id/nav_friends"
+        android:name="com.example.slagalica.ui.friends.FriendsFragment"
+        android:label="Prijatelji" />
 
     <fragment
         android:id="@+id/nav_notifications"
         android:name="com.example.slagalica.ui.notifications.NotificationsFragment"
         android:label="Notifications" />
+
+    <fragment
+        android:id="@+id/nav_region"
+        android:name="com.example.slagalica.ui.region.RegionFragment"
+        android:label="Regioni" />
 
     <fragment
         android:id="@+id/matchFragment"

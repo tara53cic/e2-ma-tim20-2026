@@ -12,6 +12,8 @@ import androidx.navigation.ui.NavigationUI;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.example.slagalica.data.NotificationRepository;
 import com.google.android.material.badge.BadgeDrawable;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -50,8 +52,8 @@ public class MainActivity extends AppCompatActivity {
             }
 
             navView.setOnItemSelectedListener(item -> {
-                if (navController.getCurrentDestination() != null && 
-                    item.getItemId() != navController.getCurrentDestination().getId()) {
+                if (navController.getCurrentDestination() != null &&
+                        item.getItemId() != navController.getCurrentDestination().getId()) {
                     navController.navigate(item.getItemId(), null, new androidx.navigation.NavOptions.Builder()
                             .setPopUpTo(navController.getGraph().getStartDestinationId(), false)
                             .setLaunchSingleTop(true)
@@ -61,6 +63,38 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             });
         }
+
+        setOnlineStatus(true);
+
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid != null) {
+            new com.example.slagalica.data.UserRepository().checkAndResetMonthlyStars(uid);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setOnlineStatus(true);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        setOnlineStatus(false);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        setOnlineStatus(false);
+    }
+
+    private void setOnlineStatus(boolean online) {
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid == null) return;
+        FirebaseFirestore.getInstance().collection("users").document(uid)
+                .update("online", online);
     }
 
     private void observeUnreadNotifications(BottomNavigationView navView) {

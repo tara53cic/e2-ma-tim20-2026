@@ -16,6 +16,13 @@ public class MatchViewModel extends ViewModel {
     private final MutableLiveData<Integer> player2Score = new MutableLiveData<>(0);
     private final MutableLiveData<String> currentFragment = new MutableLiveData<>("WAITING");
 
+    private final MutableLiveData<String> player1Name = new MutableLiveData<>("Gost");
+    private final MutableLiveData<String> player2Name = new MutableLiveData<>("Gost");
+
+    // Avatar indeksi (0-5) za oba igrača
+    private final MutableLiveData<Integer> player1AvatarIndex = new MutableLiveData<>(0);
+    private final MutableLiveData<Integer> player2AvatarIndex = new MutableLiveData<>(0);
+
     private CountDownTimer timer;
     private Runnable timerFinishAction;
 
@@ -26,24 +33,17 @@ public class MatchViewModel extends ViewModel {
     private ListenerRegistration matchListener;
     private boolean isPlayer1 = false;
 
-    public String getMatchId() {
-        return matchId;
-    }
-
-    public boolean getIsPlayer1() {
-        return isPlayer1;
-    }
+    public String getMatchId() { return matchId; }
+    public boolean getIsPlayer1() { return isPlayer1; }
 
     public LiveData<Integer> getTimeRemaining() { return timeRemaining; }
     public LiveData<Integer> getPlayer1Score() { return player1Score; }
     public LiveData<Integer> getPlayer2Score() { return player2Score; }
     public LiveData<String> getCurrentFragment() { return currentFragment; }
-
-    private final MutableLiveData<String> player1Name = new MutableLiveData<>("Gost");
-    private final MutableLiveData<String> player2Name = new MutableLiveData<>("Gost");
-
     public LiveData<String> getPlayer1Name() { return player1Name; }
     public LiveData<String> getPlayer2Name() { return player2Name; }
+    public LiveData<Integer> getPlayer1AvatarIndex() { return player1AvatarIndex; }
+    public LiveData<Integer> getPlayer2AvatarIndex() { return player2AvatarIndex; }
 
     public void initMatch(String matchId) {
         this.matchId = matchId;
@@ -73,23 +73,42 @@ public class MatchViewModel extends ViewModel {
                                 player2Score.setValue(match.getPlayer2_score());
                             }
 
+                            // Učitaj podatke igrača 1 (ime + avatar)
                             if (match.getPlayer1_id() != null) {
                                 userRepository.getUser(match.getPlayer1_id()).addOnSuccessListener(doc -> {
-                                    if (doc.exists() && doc.getString("username") != null && !doc.getString("username").isEmpty()) {
-                                        String name = doc.getString("username");
-                                        if (player1Name.getValue() == null || !name.equals(player1Name.getValue())) {
+                                    if (!doc.exists()) return;
+
+                                    String name = doc.getString("username");
+                                    if (name != null && !name.isEmpty()) {
+                                        if (!name.equals(player1Name.getValue())) {
                                             player1Name.setValue(name);
                                         }
                                     }
+
+                                    Long avatarIdx = doc.getLong("avatarColorIndex");
+                                    int idx = (avatarIdx != null) ? avatarIdx.intValue() : 0;
+                                    if (!Integer.valueOf(idx).equals(player1AvatarIndex.getValue())) {
+                                        player1AvatarIndex.setValue(idx);
+                                    }
                                 });
                             }
+
+                            // Učitaj podatke igrača 2 (ime + avatar)
                             if (match.getPlayer2_id() != null) {
                                 userRepository.getUser(match.getPlayer2_id()).addOnSuccessListener(doc -> {
-                                    if (doc.exists() && doc.getString("username") != null && !doc.getString("username").isEmpty()) {
-                                        String name = doc.getString("username");
-                                        if (player2Name.getValue() == null || !name.equals(player2Name.getValue())) {
+                                    if (!doc.exists()) return;
+
+                                    String name = doc.getString("username");
+                                    if (name != null && !name.isEmpty()) {
+                                        if (!name.equals(player2Name.getValue())) {
                                             player2Name.setValue(name);
                                         }
+                                    }
+
+                                    Long avatarIdx = doc.getLong("avatarColorIndex");
+                                    int idx = (avatarIdx != null) ? avatarIdx.intValue() : 0;
+                                    if (!Integer.valueOf(idx).equals(player2AvatarIndex.getValue())) {
+                                        player2AvatarIndex.setValue(idx);
                                     }
                                 });
                             }
@@ -108,13 +127,10 @@ public class MatchViewModel extends ViewModel {
             public void onTick(long millisUntilFinished) {
                 timeRemaining.postValue((int) (millisUntilFinished / 1000));
             }
-
             @Override
             public void onFinish() {
                 timeRemaining.postValue(0);
-                if (timerFinishAction != null) {
-                    timerFinishAction.run();
-                }
+                if (timerFinishAction != null) timerFinishAction.run();
             }
         }.start();
     }
@@ -127,15 +143,11 @@ public class MatchViewModel extends ViewModel {
         if (isPlayer1) {
             int newScore = (player1Score.getValue() != null ? player1Score.getValue() : 0) + points;
             player1Score.setValue(newScore);
-            if (matchId != null) {
-                matchRepository.updateScore(matchId, true, newScore);
-            }
+            if (matchId != null) matchRepository.updateScore(matchId, true, newScore);
         } else {
             int newScore = (player2Score.getValue() != null ? player2Score.getValue() : 0) + points;
             player2Score.setValue(newScore);
-            if (matchId != null) {
-                matchRepository.updateScore(matchId, false, newScore);
-            }
+            if (matchId != null) matchRepository.updateScore(matchId, false, newScore);
         }
     }
 
@@ -155,13 +167,13 @@ public class MatchViewModel extends ViewModel {
             currentFragment.setValue("SPOJNICE_R2");
         } else if ("SPOJNICE_R2".equals(current)) {
             currentFragment.setValue("SKOCKO_R1");
-        } else if("SKOCKO_R1".equals(current)) {
+        } else if ("SKOCKO_R1".equals(current)) {
             currentFragment.setValue("SKOCKO_R2");
-        } else if("SKOCKO_R2".equals(current)) {
+        } else if ("SKOCKO_R2".equals(current)) {
             currentFragment.setValue("ASOCIJACIJE_R1");
         } else if ("ASOCIJACIJE_R1".equals(current)) {
             currentFragment.setValue("ASOCIJACIJE_R2");
-        } else if("ASOCIJACIJE_R2".equals(current)) {
+        } else if ("ASOCIJACIJE_R2".equals(current)) {
             currentFragment.setValue("KZZ");
         } else if ("KZZ".equals(current)) {
             currentFragment.setValue("FINISHED");

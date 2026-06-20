@@ -1,4 +1,4 @@
-package com.example.slagalica.ui.home;
+package com.example.slagalica.ui.profile;
 
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -15,10 +15,12 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.Navigation;
 
 import com.example.slagalica.MainActivity;
 import com.example.slagalica.R;
 import com.example.slagalica.ui.auth.AuthViewModel;
+import com.example.slagalica.ui.home.AvatarPickerFragment;
 import com.example.slagalica.ui.profile.ProfileViewModel;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -39,12 +41,9 @@ public class ProfileFragment extends Fragment {
     };
 
     private static final int[] AVATAR_ICONS = {
-            R.drawable.ic_avatar_1,
-            R.drawable.ic_avatar_2,
-            R.drawable.ic_avatar_3,
-            R.drawable.ic_avatar_4,
-            R.drawable.ic_avatar_5,
-            R.drawable.ic_avatar_6
+            R.drawable.ic_avatar_1, R.drawable.ic_avatar_2,
+            R.drawable.ic_avatar_3, R.drawable.ic_avatar_4,
+            R.drawable.ic_avatar_5, R.drawable.ic_avatar_6
     };
 
     private static final String[] LEAGUE_NAMES = {
@@ -52,12 +51,9 @@ public class ProfileFragment extends Fragment {
     };
 
     private static final int[] LEAGUE_ICONS = {
-            R.drawable.ic_league_0,
-            R.drawable.ic_league_1,
-            R.drawable.ic_league_2,
-            R.drawable.ic_league_3,
-            R.drawable.ic_league_4,
-            R.drawable.ic_league_5
+            R.drawable.ic_league_0, R.drawable.ic_league_1,
+            R.drawable.ic_league_2, R.drawable.ic_league_3,
+            R.drawable.ic_league_4, R.drawable.ic_league_5
     };
 
     private AuthViewModel authViewModel;
@@ -73,59 +69,69 @@ public class ProfileFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        authViewModel = new ViewModelProvider(this).get(AuthViewModel.class);
+        authViewModel    = new ViewModelProvider(this).get(AuthViewModel.class);
         profileViewModel = new ViewModelProvider(this).get(ProfileViewModel.class);
 
-        ShapeableImageView ivAvatar = view.findViewById(R.id.ivAvatar);
-        View ivEditAvatar = view.findViewById(R.id.ivEditAvatar);
-        TextView tvChangePassword = view.findViewById(R.id.tvChangePassword);
-        Button btnLogout = view.findViewById(R.id.btnLogout);
-        View btnViewStats = view.findViewById(R.id.btnViewStats);
+        ShapeableImageView ivAvatar      = view.findViewById(R.id.ivAvatar);
+        View ivEditAvatar                = view.findViewById(R.id.ivEditAvatar);
+        TextView tvChangePassword        = view.findViewById(R.id.tvChangePassword);
+        Button btnLogout                 = view.findViewById(R.id.btnLogout);
+        View btnViewStats                = view.findViewById(R.id.btnViewStats);
+
         com.google.android.material.button.MaterialButton btnToggleQr = view.findViewById(R.id.btnToggleQr);
         android.widget.ImageView ivQrCode = view.findViewById(R.id.ivQrCode);
-        TextView tvUsername = view.findViewById(R.id.tvUsername);
-        TextView tvEmail = view.findViewById(R.id.tvEmail);
-        TextView tvProfileTokens = view.findViewById(R.id.tvProfileTokens);
-        TextView tvProfileStars = view.findViewById(R.id.tvProfileStars);
-        TextView tvLeague = view.findViewById(R.id.tvLeague);
-        TextView tvRegion = view.findViewById(R.id.tvRegion);
-
+        TextView tvUsername              = view.findViewById(R.id.tvUsername);
+        TextView tvEmail                 = view.findViewById(R.id.tvEmail);
+        TextView tvProfileTokens         = view.findViewById(R.id.tvProfileTokens);
+        TextView tvProfileStars          = view.findViewById(R.id.tvProfileStars);
+        TextView tvLeague                = view.findViewById(R.id.tvLeague);
+        TextView tvRegion                = view.findViewById(R.id.tvRegion);
+        ImageView ivLeagueIcon           = view.findViewById(R.id.ivLeagueIcon);
 
         profileViewModel.getUsername().observe(getViewLifecycleOwner(), name -> {
             if (name != null) tvUsername.setText(name);
         });
-
         profileViewModel.getEmail().observe(getViewLifecycleOwner(), mail -> {
             if (mail != null) tvEmail.setText(mail);
         });
-
+        ImageView ivRegionIcon = view.findViewById(R.id.ivRegionIcon);
         profileViewModel.getRegion().observe(getViewLifecycleOwner(), reg -> {
-            if (reg != null) tvRegion.setText(reg);
+            if (reg != null) {
+                tvRegion.setText(reg);
+                if (ivRegionIcon != null) {
+                    ivRegionIcon.setImageResource(
+                            com.example.slagalica.ui.region.RegionIcons.getIcon(reg));
+                }
+            }
         });
-
         profileViewModel.getTokens().observe(getViewLifecycleOwner(), tok -> {
-            if (tok != null) tvProfileTokens.setText(String.valueOf(Math.max(0,tok)));
+            if (tok != null) tvProfileTokens.setText(String.valueOf(Math.max(0, tok)));
         });
-
         profileViewModel.getStars().observe(getViewLifecycleOwner(), s -> {
             if (s != null) tvProfileStars.setText(String.valueOf(s));
         });
-
-        ImageView ivLeagueIcon = view.findViewById(R.id.ivLeagueIcon);
         profileViewModel.getLeague().observe(getViewLifecycleOwner(), leagueIndex -> {
             if (leagueIndex != null) {
-                int index = (leagueIndex >= 0 && leagueIndex < LEAGUE_NAMES.length)
-                        ? leagueIndex : 0;
+                int index = (leagueIndex >= 0 && leagueIndex < LEAGUE_NAMES.length) ? leagueIndex : 0;
                 tvLeague.setText(LEAGUE_NAMES[index]);
                 ivLeagueIcon.setImageResource(LEAGUE_ICONS[index]);
             }
         });
-
         profileViewModel.getAvatarColorIndex().observe(getViewLifecycleOwner(), colorIndex -> {
             if (colorIndex != null && colorIndex >= 0 && colorIndex < AVATAR_COLORS.length) {
                 ivAvatar.setImageResource(AVATAR_ICONS[colorIndex]);
-                ivAvatar.setBackgroundTintList(
-                        ColorStateList.valueOf(AVATAR_COLORS[colorIndex]));
+                ivAvatar.setBackgroundTintList(ColorStateList.valueOf(AVATAR_COLORS[colorIndex]));
+            }
+        });
+        profileViewModel.getAvatarBorderType().observe(getViewLifecycleOwner(), borderType -> {
+            if (borderType == null) return;
+            View ivAvatarBorder = view.findViewById(R.id.ivAvatarBorder);
+            if (ivAvatarBorder == null) return;
+            switch (borderType) {
+                case 1: ivAvatarBorder.setBackgroundResource(R.drawable.avatar_border_gold);   break;
+                case 2: ivAvatarBorder.setBackgroundResource(R.drawable.avatar_border_silver); break;
+                case 3: ivAvatarBorder.setBackgroundResource(R.drawable.avatar_border_bronze); break;
+                default: ivAvatarBorder.setBackgroundResource(R.drawable.avatar_border_default); break;
             }
         });
 
@@ -133,15 +139,16 @@ public class ProfileFragment extends Fragment {
             if (msg != null) Toast.makeText(getContext(), msg, Toast.LENGTH_SHORT).show();
         });
 
-        //Dugme za statistiku
         btnViewStats.setOnClickListener(v -> {
             if (getActivity() != null) {
                 BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottom_nav);
-                if (bottomNav != null) {
-                    bottomNav.setSelectedItemId(R.id.nav_statistics);
-                }
+                if (bottomNav != null) bottomNav.setSelectedItemId(R.id.nav_statistics);
             }
         });
+
+        // Mapa regiona
+        view.findViewById(R.id.llRegionCard).setOnClickListener(v ->
+                Navigation.findNavController(view).navigate(R.id.nav_region));
 
         // QR
         final boolean[] qrVisible = {false};
@@ -161,10 +168,10 @@ public class ProfileFragment extends Fragment {
                             Toast.makeText(getContext(), "Greška pri generisanju QR koda.", Toast.LENGTH_SHORT).show();
                         }
                     }
-                    ivQrCode.setVisibility(android.view.View.VISIBLE);
+                    ivQrCode.setVisibility(View.VISIBLE);
                     btnToggleQr.setText("Sakrij QR kod");
                 } else {
-                    ivQrCode.setVisibility(android.view.View.GONE);
+                    ivQrCode.setVisibility(View.GONE);
                     btnToggleQr.setText("Prikaži QR kod");
                 }
             });
@@ -179,20 +186,16 @@ public class ProfileFragment extends Fragment {
             }
         });
 
-        tvChangePassword.setOnClickListener(v -> {
-            androidx.navigation.Navigation.findNavController(getView()).navigate(R.id.action_nav_profile_to_resetPasswordFragment);
-        });
+        tvChangePassword.setOnClickListener(v ->
+                Navigation.findNavController(view).navigate(R.id.action_nav_profile_to_resetPasswordFragment));
 
-        btnLogout.setOnClickListener(v -> {
-            authViewModel.logout();
-        });
+        btnLogout.setOnClickListener(v -> authViewModel.logout());
 
-        ivEditAvatar.setOnClickListener(v -> {
-            requireActivity().getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.nav_host_fragment_main, new AvatarPickerFragment())
-                    .addToBackStack(null)
-                    .commit();
-        });
+        ivEditAvatar.setOnClickListener(v ->
+                requireActivity().getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.nav_host_fragment_main, new AvatarPickerFragment())
+                        .addToBackStack(null)
+                        .commit());
     }
 }

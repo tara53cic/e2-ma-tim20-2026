@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="10dp"
+    android:layout_marginBottom="4dp">
+
+    <!-- Rank broj -->
+    <TextView
+        android:id="@+id/tvRegionRank"
+        android:layout_width="30dp"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:gravity="center"/>
+
+    <!-- Ikonica regiona -->
+    <ImageView
+        android:id="@+id/ivRegionIcon"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginStart="6dp"
+        android:layout_marginEnd="10dp"/>
+
+    <!-- Naziv -->
+    <TextView
+        android:id="@+id/tvRegionItemName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="@color/text_primary"
+        android:textSize="14sp"
+        android:textStyle="bold"/>
+
+    <!-- Zvezde -->
+    <TextView
+        android:id="@+id/tvRegionStars"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/warning"
+        android:textSize="13sp"
+        android:layout_marginEnd="10dp"/>
+
+    <!-- Igrači -->
+    <TextView
+        android:id="@+id/tvRegionPlayers"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp"/>
+
+</LinearLayout>

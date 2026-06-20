@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import com.example.slagalica.data.UserRepository;
+import com.example.slagalica.domain.service.LeagueManager;
 import com.example.slagalica.domain.service.UserStatsService;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -13,6 +14,7 @@ public class MatchResultViewModel extends ViewModel {
 
     private final UserRepository userRepository;
     private final UserStatsService userStatsService;
+    private final LeagueManager leagueManager;
 
     private final MutableLiveData<UserStatsService.UserStatsResult> statsResult = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
@@ -20,15 +22,11 @@ public class MatchResultViewModel extends ViewModel {
     public MatchResultViewModel() {
         this.userRepository = new UserRepository();
         this.userStatsService = new UserStatsService();
+        this.leagueManager = new LeagueManager();
     }
 
-    public LiveData<UserStatsService.UserStatsResult> getStatsResult() {
-        return statsResult;
-    }
-
-    public LiveData<Boolean> getIsLoading() {
-        return isLoading;
-    }
+    public LiveData<UserStatsService.UserStatsResult> getStatsResult() { return statsResult; }
+    public LiveData<Boolean> getIsLoading() { return isLoading; }
 
     public void calculateAndSaveStats(boolean isPlayer1, int p1Score, int p2Score) {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
@@ -41,22 +39,30 @@ public class MatchResultViewModel extends ViewModel {
 
         userRepository.getUser(currentUser.getUid()).addOnSuccessListener(documentSnapshot -> {
             if (documentSnapshot.exists()) {
-                Long currentStarsLong = documentSnapshot.getLong("stars");
+                Long currentStarsLong  = documentSnapshot.getLong("stars");
                 Long currentTokensLong = documentSnapshot.getLong("tokens");
+                Long currentLeagueLong = documentSnapshot.getLong("league");
 
-                int currentStars = currentStarsLong != null ? currentStarsLong.intValue() : 0;
+                int currentStars  = currentStarsLong  != null ? currentStarsLong.intValue()  : 0;
                 int currentTokens = currentTokensLong != null ? currentTokensLong.intValue() : 0;
+                int currentLeague = currentLeagueLong != null ? currentLeagueLong.intValue() : 0;
 
-                UserStatsService.UserStatsResult result = userStatsService.calculateNewStats(myScore, opponentScore, currentStars, currentTokens);
+                UserStatsService.UserStatsResult result =
+                        userStatsService.calculateNewStats(myScore, opponentScore, currentStars, currentTokens);
 
-                userRepository.updateUserStats(currentUser.getUid(), result.newStars, result.newTokens).addOnCompleteListener(task -> {
-                    statsResult.postValue(result);
-                    isLoading.postValue(false);
-                });
+                int starsChange = result.totalStarsChange;
+
+                userRepository.updateUserStatsWithMonthly(
+                                currentUser.getUid(), result.newStars, result.newTokens, starsChange)
+                        .addOnCompleteListener(task -> {
+                            leagueManager.updateLeagueIfNeeded(
+                                    currentUser.getUid(), result.newStars, currentLeague);
+                            statsResult.postValue(result);
+                            isLoading.postValue(false);
+                        });
             } else {
                 isLoading.postValue(false);
             }
         }).addOnFailureListener(e -> isLoading.postValue(false));
     }
 }
-
