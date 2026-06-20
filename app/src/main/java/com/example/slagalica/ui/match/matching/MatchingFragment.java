@@ -68,11 +68,14 @@ public class MatchingFragment extends Fragment {
 
     private static final int C_DEFAULT  = Color.parseColor("#1E3A5F");
     private static final int C_SELECTED = Color.parseColor("#F4A261");
-    private static final int C_MINE     = Color.parseColor("#E53935");
-    private static final int C_OPP      = Color.parseColor("#508EFA");
+    private static final int C_PLAYER1  = Color.parseColor("#E87C3E"); // narandžasta - igrač 1
+    private static final int C_PLAYER2  = Color.parseColor("#508EFA"); // plava - igrač 2
     private static final int C_NONE     = Color.parseColor("#607D8B");
     private static final int C_FAILED   = Color.parseColor("#374A5E");
     private static final int C_WRONG    = Color.parseColor("#455A7A");
+
+    private int C_MINE;
+    private int C_OPP;
 
     @Nullable @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -93,6 +96,14 @@ public class MatchingFragment extends Fragment {
         isRound1   = "SPOJNICE_R1".equals(fragPhase);
         gameKey    = isRound1 ? "matching_r1" : "matching_r2";
         iAmStarter = isRound1 ? sharedViewModel.getIsPlayer1() : !sharedViewModel.getIsPlayer1();
+
+        if (sharedViewModel.getIsPlayer1()) {
+            C_MINE = C_PLAYER1;
+            C_OPP  = C_PLAYER2;
+        } else {
+            C_MINE = C_PLAYER2;
+            C_OPP  = C_PLAYER1;
+        }
 
         tvTitle    = view.findViewById(R.id.tvSpojniceTitle);
         tvTurn     = view.findViewById(R.id.tvSpojniceTurn);
