@@ -9,6 +9,11 @@ import com.example.slagalica.domain.service.LeagueManager;
 import com.example.slagalica.domain.service.UserStatsService;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class MatchResultViewModel extends ViewModel {
 
@@ -34,35 +39,47 @@ public class MatchResultViewModel extends ViewModel {
 
         isLoading.setValue(true);
 
-        int myScore = isPlayer1 ? p1Score : p2Score;
+        int myScore       = isPlayer1 ? p1Score : p2Score;
         int opponentScore = isPlayer1 ? p2Score : p1Score;
 
-        userRepository.getUser(currentUser.getUid()).addOnSuccessListener(documentSnapshot -> {
-            if (documentSnapshot.exists()) {
-                Long currentStarsLong  = documentSnapshot.getLong("stars");
-                Long currentTokensLong = documentSnapshot.getLong("tokens");
-                Long currentLeagueLong = documentSnapshot.getLong("league");
+        userRepository.getUser(currentUser.getUid()).addOnSuccessListener(doc -> {
+            if (!doc.exists()) { isLoading.postValue(false); return; }
 
-                int currentStars  = currentStarsLong  != null ? currentStarsLong.intValue()  : 0;
-                int currentTokens = currentTokensLong != null ? currentTokensLong.intValue() : 0;
-                int currentLeague = currentLeagueLong != null ? currentLeagueLong.intValue() : 0;
+            Long currentStarsLong  = doc.getLong("stars");
+            Long currentTokensLong = doc.getLong("tokens");
+            Long currentLeagueLong = doc.getLong("league");
+            Long monthlyStarsLong  = doc.getLong("monthlyStars");
 
-                UserStatsService.UserStatsResult result =
-                        userStatsService.calculateNewStats(myScore, opponentScore, currentStars, currentTokens);
+            int currentStars   = currentStarsLong  != null ? currentStarsLong.intValue()  : 0;
+            int currentTokens  = currentTokensLong != null ? currentTokensLong.intValue() : 0;
+            int currentLeague  = currentLeagueLong != null ? currentLeagueLong.intValue() : 0;
+            int currentMonthly = monthlyStarsLong  != null ? monthlyStarsLong.intValue()  : 0;
 
-                int starsChange = result.totalStarsChange;
+            UserStatsService.UserStatsResult result =
+                    userStatsService.calculateNewStats(myScore, opponentScore, currentStars, currentTokens);
 
-                userRepository.updateUserStatsWithMonthly(
-                                currentUser.getUid(), result.newStars, result.newTokens, starsChange)
-                        .addOnCompleteListener(task -> {
-                            leagueManager.updateLeagueIfNeeded(
-                                    currentUser.getUid(), result.newStars, currentLeague);
-                            statsResult.postValue(result);
-                            isLoading.postValue(false);
-                        });
-            } else {
-                isLoading.postValue(false);
+            final int starsBeforeConversion = Math.max(0, currentStars + result.totalStarsChange);
+
+            int monthlyStarsNew = currentMonthly;
+            if (result.totalStarsChange > 0) {
+                monthlyStarsNew += result.totalStarsChange;
             }
+
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("stars", result.newStars);
+            updates.put("tokens", result.newTokens);
+            updates.put("monthlyStars", monthlyStarsNew);
+
+            FirebaseFirestore.getInstance()
+                    .collection("users").document(currentUser.getUid())
+                    .update(updates)
+                    .addOnCompleteListener(task -> {
+                        leagueManager.updateLeagueIfNeeded(
+                                currentUser.getUid(), starsBeforeConversion, currentLeague);
+                        statsResult.postValue(result);
+                        isLoading.postValue(false);
+                    });
+
         }).addOnFailureListener(e -> isLoading.postValue(false));
     }
 }

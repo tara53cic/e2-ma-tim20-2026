@@ -68,7 +68,16 @@ public class MainActivity extends AppCompatActivity {
 
         String uid = FirebaseAuth.getInstance().getUid();
         if (uid != null) {
-            new com.example.slagalica.data.UserRepository().checkAndResetMonthlyStars(uid);
+            new com.example.slagalica.domain.service.DailyTokenService()
+                    .checkAndGiveDailyTokens(uid);
+
+            new com.example.slagalica.data.UserRepository().getUser(uid)
+                    .addOnSuccessListener(doc -> {
+                        if (!doc.exists()) return;
+                        String lastReset = doc.getString("lastResetMonth");
+                        new com.example.slagalica.domain.service.MonthlyPenaltyService()
+                                .applyPenaltyIfNeeded(uid, lastReset);
+                    });
         }
     }
 
