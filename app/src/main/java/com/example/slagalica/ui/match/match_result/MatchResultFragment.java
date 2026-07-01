@@ -68,7 +68,8 @@ public class MatchResultFragment extends Fragment {
         });
 
         boolean isPlayer1 = sharedViewModel.getIsPlayer1();
-        resultViewModel.calculateAndSaveStats(isPlayer1, p1Score, p2Score);
+        String matchId = sharedViewModel.getMatchId();
+        resultViewModel.calculateAndSaveStats(isPlayer1, p1Score, p2Score, matchId, false, false);
 
         btnHome.setOnClickListener(v -> {
             FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();

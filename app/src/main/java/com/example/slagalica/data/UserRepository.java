@@ -25,6 +25,13 @@ public class UserRepository {
                 .update("tokens", FieldValue.increment(-amount));
     }
 
+    public Task<Void> addTokens(int amount) {
+        String uid = auth.getUid();
+        if (uid == null) return null;
+        return db.collection("users").document(uid)
+                .update("tokens", FieldValue.increment(amount));
+    }
+
     public Task<DocumentSnapshot> getUser(String uid) {
         return db.collection("users").document(uid).get();
     }
@@ -69,6 +76,22 @@ public class UserRepository {
         String uid = auth.getUid();
         if (uid == null) return;
         db.collection("users").document(uid).update("inGame", inGame);
+    }
+
+    public Task<Void> initializeNewUser(String uid, String email, String username, String region) {
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("email", email);
+        userData.put("username", username);
+        userData.put("region", region);
+        userData.put("tokens", 5);
+        userData.put("stars", 0);
+        userData.put("league", 0);
+        userData.put("monthlyStars", 0);
+        userData.put("lastResetMonth", getCurrentMonth());
+        userData.put("lastDailyBonus", "");
+        userData.put("createdAt", System.currentTimeMillis());
+
+        return db.collection("users").document(uid).set(userData);
     }
 
     private String getCurrentMonth() {

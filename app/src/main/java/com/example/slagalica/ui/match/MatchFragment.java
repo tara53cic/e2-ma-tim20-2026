@@ -135,7 +135,8 @@ public class MatchFragment extends Fragment {
         });
 
         if (savedInstanceState == null) {
-            userRepository.deductTokens(5);
+
+            matchViewModel.shouldDeductToken();
             userRepository.setInGame(true);
         }
 

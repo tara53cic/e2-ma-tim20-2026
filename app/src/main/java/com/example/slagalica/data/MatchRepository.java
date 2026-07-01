@@ -75,5 +75,19 @@ public class MatchRepository {
         }
         return null;
     }
+
+    public Task<Void> recordPlayerAbandonment(String matchId, String abandonedByUserId) {
+        return db.collection("matches").document(matchId)
+                .update("abandonedBy", abandonedByUserId, "status", "FINISHED");
+    }
+
+    public Task<Void> recordPlayerTimeout(String matchId, boolean isPlayer1) {
+        String field = isPlayer1 ? "player1_timedOut" : "player2_timedOut";
+        return db.collection("matches").document(matchId).update(field, true);
+    }
+
+    public Task<DocumentSnapshot> getMatch(String matchId) {
+        return db.collection("matches").document(matchId).get();
+    }
 }
 

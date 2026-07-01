@@ -20,6 +20,7 @@ import com.example.slagalica.R;
 import com.example.slagalica.data.GameStateRepository;
 import com.example.slagalica.data.UserStatsRepository;
 import com.example.slagalica.domain.models.MatchingData;
+import com.example.slagalica.domain.service.GameStateMonitor;
 import com.example.slagalica.ui.match.MatchViewModel;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -38,6 +39,9 @@ public class MatchingFragment extends Fragment {
     private ListenerRegistration gameListener;
     private ListenerRegistration dataListener;
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private GameStateMonitor gameStateMonitor;
+    private String opponentUserId;
+    private boolean opponentAbandoned = false;
 
     private Button[] leftButtons;
     private Button[] rightButtons;
@@ -193,6 +197,7 @@ public class MatchingFragment extends Fragment {
         }
 
         startListening();
+        startAbandonmentMonitoring();  // DODANO
     }
 
     private void startListening() {
@@ -482,11 +487,67 @@ public class MatchingFragment extends Fragment {
         for (Button b : rightButtons) if (b != null) b.setEnabled(en);
     }
 
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        handler.removeCallbacksAndMessages(null);
-        if (gameListener != null) gameListener.remove();
-        if (dataListener != null) dataListener.remove();
+
+    private void startAbandonmentMonitoring() {
+        if (matchId == null || opponentAbandoned) return;
+        loadOpponentUserId();
+
+        new java.util.Timer().scheduleAtFixedRate(
+                new java.util.TimerTask() {
+                    @Override
+                    public void run() {
+                        if (roundDone || opponentAbandoned) {
+                            this.cancel();
+                            return;
+                        }
+
+                        if (opponentUserId == null) {
+                            loadOpponentUserId();
+                            return;
+                        }
+
+                        gameStateMonitor.isPlayerActive(opponentUserId)
+                                .addOnSuccessListener(isActive -> {
+                                    if (!isActive && !opponentAbandoned) {
+                                        opponentAbandoned = true;
+                                        this.cancel();
+                                        handleOpponentAbandonment();
+                                    }
+                                });
+                    }
+                },
+                3000,
+                5000
+        );
+    }
+
+    private void loadOpponentUserId() {
+        if (matchId == null) return;
+        com.example.slagalica.data.MatchRepository matchRepo = 
+                new com.example.slagalica.data.MatchRepository();
+        matchRepo.getMatch(matchId)
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        boolean isP1 = sharedViewModel.getIsPlayer1();
+                        opponentUserId = isP1 ?
+                                doc.getString("player2_id") :
+                                doc.getString("player1_id");
+                    }
+                });
+    }
+
+    private void handleOpponentAbandonment() {
+        Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
+        if (matchId != null && opponentUserId != null) {
+            gameStateMonitor.detectAndHandleAbandonment(
+                    matchId,
+                    opponentUserId,
+                    com.google.firebase.auth.FirebaseAuth.getInstance().getUid()
+            ).addOnSuccessListener(v -> {
+                roundDone = true;
+                sharedViewModel.advanceGamePhase();
+            });
+        }
     }
 }
+

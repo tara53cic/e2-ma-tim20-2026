@@ -32,6 +32,7 @@ public class MatchViewModel extends ViewModel {
     private String currentUserId;
     private ListenerRegistration matchListener;
     private boolean isPlayer1 = false;
+    private boolean isTokenDeducted = false;
 
     public String getMatchId() { return matchId; }
     public boolean getIsPlayer1() { return isPlayer1; }
@@ -73,7 +74,7 @@ public class MatchViewModel extends ViewModel {
                                 player2Score.setValue(match.getPlayer2_score());
                             }
 
-                            // Učitaj podatke igrača 1 (ime + avatar)
+
                             if (match.getPlayer1_id() != null) {
                                 userRepository.getUser(match.getPlayer1_id()).addOnSuccessListener(doc -> {
                                     if (!doc.exists()) return;
@@ -93,7 +94,7 @@ public class MatchViewModel extends ViewModel {
                                 });
                             }
 
-                            // Učitaj podatke igrača 2 (ime + avatar)
+
                             if (match.getPlayer2_id() != null) {
                                 userRepository.getUser(match.getPlayer2_id()).addOnSuccessListener(doc -> {
                                     if (!doc.exists()) return;
@@ -187,5 +188,19 @@ public class MatchViewModel extends ViewModel {
         super.onCleared();
         if (timer != null) timer.cancel();
         if (matchListener != null) matchListener.remove();
+    }
+
+    public void shouldDeductToken() {
+        if (matchId != null && !isTokenDeducted) {
+            matchRepository.getMatch(matchId).addOnSuccessListener(doc -> {
+                if (doc.exists()) {
+                    boolean isFriendly = doc.getBoolean("friendly") != null && doc.getBoolean("friendly");
+                    if (!isFriendly) {
+                        userRepository.deductTokens(1);
+                        isTokenDeducted = true;
+                    }
+                }
+            });
+        }
     }
 }

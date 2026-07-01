@@ -18,6 +18,7 @@ import androidx.lifecycle.ViewModelProvider;
 import com.example.slagalica.R;
 import com.example.slagalica.data.NumberGameRepository;
 import com.example.slagalica.data.UserStatsRepository;
+import com.example.slagalica.domain.service.GameStateMonitor;
 import com.example.slagalica.domain.service.NumberGameScoringService;
 import com.example.slagalica.domain.usecase.EvaluateMathExpressionUseCase;
 import com.example.slagalica.ui.match.MatchViewModel;
@@ -40,6 +41,7 @@ public class NumberGameFragment extends Fragment {
     private ShakeDetector shakeDetector;
     private NumberGameRepository numberGameRepo;
     private ListenerRegistration gameListener;
+    private GameStateMonitor gameStateMonitor;  // ← DODANO
 
     private String matchId;
     private String gameKey;
@@ -62,6 +64,7 @@ public class NumberGameFragment extends Fragment {
         evaluateMathExpressionUseCase = new EvaluateMathExpressionUseCase();
         scoringService = new NumberGameScoringService();
         numberGameRepo = new NumberGameRepository();
+        gameStateMonitor = new GameStateMonitor();  // ← DODANO
 
         matchId = sharedViewModel.getMatchId();
         String phase = sharedViewModel.getCurrentFragment().getValue();
@@ -166,10 +169,14 @@ public class NumberGameFragment extends Fragment {
                         if (isActivePlayer) handleStopClicked();
                     });
                     listenToGameState();
+                    // ← DODANO: Proveravamo da li je protivnik aktivan
+                    checkOpponentStatus();
                 });
             } else {
                 viewModel.startTargetShuffle();
                 listenToGameState();
+                // ← DODANO: Proveravamo da li je protivnik aktivan (aktivni igrač)
+                checkOpponentStatus();
             }
         } else {
             viewModel.startTargetShuffle();
@@ -286,6 +293,8 @@ public class NumberGameFragment extends Fragment {
     }
 
     private boolean resultFinalized = false;
+    private String opponentUserId;
+    private boolean opponentAbandoned = false;
 
     private void submitGameResult() {
         if (viewModel.getGameState().getValue() == NumberGameViewModel.GameState.FINISHED) return;
@@ -313,6 +322,79 @@ public class NumberGameFragment extends Fragment {
             sharedViewModel.addCurrentPlayerPoints(points);
             Toast.makeText(getContext(), getString(R.string.game_result_toast, resLong, points), Toast.LENGTH_LONG).show();
             sharedViewModel.advanceGamePhase();
+        }
+    }
+
+
+    private void checkOpponentStatus() {
+        if (matchId == null || opponentAbandoned) return;
+
+
+        new java.util.Timer().scheduleAtFixedRate(
+                new java.util.TimerTask() {
+                    private java.util.Timer timer = new java.util.Timer();
+                    @Override
+                    public void run() {
+                        if (viewModel != null &&
+                            viewModel.getGameState().getValue() == NumberGameViewModel.GameState.FINISHED) {
+                            this.cancel();
+                            return;
+                        }
+
+
+                        if (opponentUserId == null) {
+                            loadOpponentUserId();
+                            return;
+                        }
+
+
+                        gameStateMonitor.isPlayerActive(opponentUserId)
+                                .addOnSuccessListener(isActive -> {
+                                    if (!isActive && !opponentAbandoned) {
+                                        opponentAbandoned = true;
+                                        this.cancel();
+                                        handleOpponentAbandonment();
+                                    }
+                                });
+                    }
+                },
+                3000,
+                5000
+        );
+    }
+
+
+    private void loadOpponentUserId() {
+        if (matchId == null) return;
+
+        com.example.slagalica.data.MatchRepository matchRepo =
+                new com.example.slagalica.data.MatchRepository();
+        matchRepo.getMatch(matchId)
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        boolean isP1 = sharedViewModel.getIsPlayer1();
+                        opponentUserId = isP1 ?
+                                doc.getString("player2_id") :
+                                doc.getString("player1_id");
+                    }
+                });
+    }
+
+
+    private void handleOpponentAbandonment() {
+        Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
+
+
+        if (matchId != null && opponentUserId != null) {
+            gameStateMonitor.detectAndHandleAbandonment(
+                    matchId,
+                    opponentUserId,
+                    com.google.firebase.auth.FirebaseAuth.getInstance().getUid()
+            ).addOnSuccessListener(v -> {
+
+                sharedViewModel.stopTimer();
+                sharedViewModel.advanceGamePhase();
+            });
         }
     }
 }

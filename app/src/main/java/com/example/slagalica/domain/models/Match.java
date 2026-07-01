@@ -8,6 +8,10 @@ public class Match {
     private int player2_score;
     private String status;
     private boolean friendly;
+    private String abandonedBy;
+    private long createdAt;
+    private boolean player1_timedOut;
+    private boolean player2_timedOut;
 
     public Match() {}
 
@@ -20,6 +24,9 @@ public class Match {
         this.player2_score = player2_score;
         this.status = status;
         this.friendly = false;
+        this.createdAt = System.currentTimeMillis();
+        this.player1_timedOut = false;
+        this.player2_timedOut = false;
     }
 
     public String getId() { return id; }
@@ -36,4 +43,12 @@ public class Match {
     public void setStatus(String status) { this.status = status; }
     public boolean isFriendly() { return friendly; }
     public void setFriendly(boolean friendly) { this.friendly = friendly; }
+    public String getAbandonedBy() { return abandonedBy; }
+    public void setAbandonedBy(String abandonedBy) { this.abandonedBy = abandonedBy; }
+    public long getCreatedAt() { return createdAt; }
+    public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
+    public boolean isPlayer1_timedOut() { return player1_timedOut; }
+    public void setPlayer1_timedOut(boolean player1_timedOut) { this.player1_timedOut = player1_timedOut; }
+    public boolean isPlayer2_timedOut() { return player2_timedOut; }
+    public void setPlayer2_timedOut(boolean player2_timedOut) { this.player2_timedOut = player2_timedOut; }
 }
