@@ -12,10 +12,13 @@ import androidx.navigation.ui.NavigationUI;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.example.slagalica.data.NotificationRepository;
 import com.google.android.material.badge.BadgeDrawable;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 public class MainActivity extends AppCompatActivity {
 
     private NotificationRepository notificationRepository;
+    private IncomingRequestManager incomingRequestManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,8 +53,8 @@ public class MainActivity extends AppCompatActivity {
             }
 
             navView.setOnItemSelectedListener(item -> {
-                if (navController.getCurrentDestination() != null && 
-                    item.getItemId() != navController.getCurrentDestination().getId()) {
+                if (navController.getCurrentDestination() != null &&
+                        item.getItemId() != navController.getCurrentDestination().getId()) {
                     navController.navigate(item.getItemId(), null, new androidx.navigation.NavOptions.Builder()
                             .setPopUpTo(navController.getGraph().getStartDestinationId(), false)
                             .setLaunchSingleTop(true)
@@ -61,6 +64,54 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             });
         }
+
+        setOnlineStatus(true);
+
+        incomingRequestManager = new IncomingRequestManager(this);
+        incomingRequestManager.start();
+
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid != null) {
+            new com.example.slagalica.domain.service.DailyTokenService()
+                    .checkAndGiveDailyTokens(uid);
+
+            new com.example.slagalica.data.UserRepository().getUser(uid)
+                    .addOnSuccessListener(doc -> {
+                        if (!doc.exists()) return;
+                        String lastReset = doc.getString("lastResetMonth");
+                        new com.example.slagalica.domain.service.MonthlyPenaltyService()
+                                .applyPenaltyIfNeeded(uid, lastReset);
+                    });
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setOnlineStatus(true);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        setOnlineStatus(false);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        setOnlineStatus(false);
+        if (incomingRequestManager != null) incomingRequestManager.stop();
+    }
+
+    private void setOnlineStatus(boolean online) {
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid == null) return;
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("online", online);
+        data.put("inGame", false);
+        FirebaseFirestore.getInstance().collection("users").document(uid)
+                .set(data, com.google.firebase.firestore.SetOptions.merge());
     }
 
     private void observeUnreadNotifications(BottomNavigationView navView) {

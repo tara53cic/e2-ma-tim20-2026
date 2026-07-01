@@ -210,4 +210,18 @@ public class NotificationRepository {
                     }
                 });
     }
+
+    public void createNotificationForUser(String targetUid, String title,
+                                          String message, NotificationType type) {
+        if (targetUid == null) return;
+
+        DatabaseReference userNotificationsRef = notificationsRef.child(targetUid);
+        String id = userNotificationsRef.push().getKey();
+        if (id == null) return;
+
+        Notification notification = new Notification(
+                id, title, message, type, false, System.currentTimeMillis());
+
+        userNotificationsRef.child(id).setValue(notification);
+    }
 }

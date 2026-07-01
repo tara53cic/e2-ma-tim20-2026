@@ -1,4 +1,4 @@
-package com.example.slagalica.ui.home;
+package com.example.slagalica.ui.profile;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;

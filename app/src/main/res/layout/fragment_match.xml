@@ -18,47 +18,64 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
+        <!-- Player 1 card — crveni border -->
         <LinearLayout
             android:id="@+id/player1Card"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:background="@drawable/bg_card"
-            android:padding="8dp"
+            android:background="#E87C3E"
+            android:padding="3dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent">
 
-            <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_avatar_placeholder" />
-
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginStart="12dp">
-                <TextView
-                    android:id="@+id/tvPlayer1Name"
-                    android:layout_width="64dp"
-                    android:layout_height="wrap_content"
-                    android:text="@string/player_guest"
-                    android:textColor="@color/background"
-                    android:textStyle="bold"
-                    android:maxLines="1"
-                    android:ellipsize="end"
-                    android:textSize="16sp" />
-                <TextView
-                    android:id="@+id/tvPlayer1Score"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_card"
+                android:padding="8dp">
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/ivPlayer1Avatar"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_avatar_placeholder"
+                    app:shapeAppearanceOverlay="@style/CircleImageView" />
+
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/points_0"
-                    android:textColor="@color/background"
-                    android:textStyle="bold"
-                    android:textSize="18sp" />
+                    android:orientation="vertical"
+                    android:layout_marginStart="12dp">
+
+                    <TextView
+                        android:id="@+id/tvPlayer1Name"
+                        android:layout_width="64dp"
+                        android:layout_height="wrap_content"
+                        android:text="@string/player_guest"
+                        android:textColor="@color/background"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/tvPlayer1Score"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/points_0"
+                        android:textColor="@color/background"
+                        android:textStyle="bold"
+                        android:textSize="18sp" />
+
+                </LinearLayout>
+
             </LinearLayout>
+
         </LinearLayout>
 
         <TextView
@@ -76,14 +93,15 @@
             app:layout_constraintStart_toEndOf="@id/player1Card"
             app:layout_constraintEnd_toStartOf="@id/player2Card" />
 
+        <!-- Player 2 card — plavi border -->
         <LinearLayout
             android:id="@+id/player2Card"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:background="@drawable/bg_card"
-            android:padding="8dp"
+            android:background="#508EFA"
+            android:padding="3dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent">
@@ -91,34 +109,50 @@
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="end"
-                android:layout_marginEnd="12dp">
-                <TextView
-                    android:id="@+id/tvPlayer2Name"
-                    android:layout_width="64dp"
-                    android:layout_height="wrap_content"
-                    android:text="@string/player_guest"
-                    android:textColor="@color/background"
-                    android:textStyle="bold"
-                    android:maxLines="1"
-                    android:ellipsize="end"
-                    android:gravity="end"
-                    android:textSize="16sp" />
-                <TextView
-                    android:id="@+id/tvPlayer2Score"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_card"
+                android:padding="8dp">
+
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/points_0"
-                    android:textColor="@color/background"
-                    android:textStyle="bold"
-                    android:textSize="18sp" />
+                    android:orientation="vertical"
+                    android:gravity="end"
+                    android:layout_marginEnd="12dp">
+
+                    <TextView
+                        android:id="@+id/tvPlayer2Name"
+                        android:layout_width="64dp"
+                        android:layout_height="wrap_content"
+                        android:text="@string/player_guest"
+                        android:textColor="@color/background"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:gravity="end"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/tvPlayer2Score"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/points_0"
+                        android:textColor="@color/background"
+                        android:textStyle="bold"
+                        android:textSize="18sp" />
+
+                </LinearLayout>
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/ivPlayer2Avatar"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_avatar_placeholder"
+                    app:shapeAppearanceOverlay="@style/CircleImageView" />
+
             </LinearLayout>
 
-            <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_avatar_placeholder" />
         </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
