@@ -102,10 +102,17 @@ public class AssociationsFragment extends Fragment {
 
         if (sharedViewModel.isChallenge()) {
             opponentAbandoned = false;
-        } else if (sharedViewModel.getIsOpponentAbandoned().getValue() != null && sharedViewModel.getIsOpponentAbandoned().getValue()) {
-            opponentAbandoned = true;
         } else {
-            startAbandonmentMonitoring();
+            if (Boolean.TRUE.equals(sharedViewModel.getIsOpponentAbandoned().getValue())) {
+                opponentAbandoned = true;
+            } else {
+                startAbandonmentMonitoring();
+            }
+            // Trenutna reakcija na osnovu match dokumenta (vidi MatchViewModel), ne čekamo
+            // isključivo spori online/inGame polling.
+            sharedViewModel.getIsOpponentAbandoned().observe(getViewLifecycleOwner(), abandoned -> {
+                if (Boolean.TRUE.equals(abandoned)) onOpponentConfirmedGone();
+            });
         }
 
         if (sharedViewModel.isChallenge()) {
@@ -750,9 +757,8 @@ public class AssociationsFragment extends Fragment {
                     com.google.firebase.auth.FirebaseAuth.getInstance().getUid()
             ).addOnSuccessListener(wasAbandoned -> {
                 if (Boolean.TRUE.equals(wasAbandoned)) {
-                    Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
                     sharedViewModel.setOpponentAbandoned(true);
-                    if (!isMyTurn()) passTurn();
+                    onOpponentConfirmedGone();
                 } else {
                     opponentAbandoned = false;
                     refreshInputState();
@@ -763,6 +769,32 @@ public class AssociationsFragment extends Fragment {
             localRoundOver = true;
             sharedViewModel.stopTimer();
             doAdvance();
+        }
+    }
+
+    private void onOpponentConfirmedGone() {
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
+        }
+        boolean firstTime = !opponentAbandoned;
+        opponentAbandoned = true;
+        if (firstTime && isAdded()) {
+            Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
+        }
+        if (localRoundOver) return;
+
+        boolean normallyInitiator = sharedViewModel.isChallenge() || ("assoc_r1".equals(gameKey)
+                ? sharedViewModel.getIsPlayer1()
+                : !sharedViewModel.getIsPlayer1());
+
+        if (!associationsViewModel.puzzleLoaded) {
+            if (normallyInitiator) return; // moje sopstveno učitavanje je već u toku
+            // Protivnik je trebalo da objavi asocijaciju, ali je otišao pre
+            // nego što je to uradio - sami je učitavamo i objavljujemo.
+            initializeRoundIfNeeded();
+        } else if (!isMyTurn()) {
+            passTurn();
         }
     }
 

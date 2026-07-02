@@ -157,6 +157,7 @@ public class MatchFragment extends Fragment {
         super.onDestroyView();
         if (getActivity() != null && !getActivity().isChangingConfigurations()) {
             userRepository.setInGame(false);
+            matchViewModel.markLeftIfMidMatch();
         }
         View bottomNav = requireActivity().findViewById(R.id.bottom_nav);
         if (bottomNav != null) bottomNav.setVisibility(View.VISIBLE);

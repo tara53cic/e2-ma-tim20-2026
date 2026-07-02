@@ -97,10 +97,17 @@ public class SkockoFragment extends Fragment {
 
         if (sharedViewModel.isChallenge()) {
             opponentAbandoned = false;
-        } else if (sharedViewModel.getIsOpponentAbandoned().getValue() != null && sharedViewModel.getIsOpponentAbandoned().getValue()) {
-            opponentAbandoned = true;
         } else {
-            startAbandonmentMonitoring();
+            if (Boolean.TRUE.equals(sharedViewModel.getIsOpponentAbandoned().getValue())) {
+                opponentAbandoned = true;
+            } else {
+                startAbandonmentMonitoring();
+            }
+            // Trenutna reakcija na osnovu match dokumenta (vidi MatchViewModel), ne čekamo
+            // isključivo spori online/inGame polling.
+            sharedViewModel.getIsOpponentAbandoned().observe(getViewLifecycleOwner(), abandoned -> {
+                if (Boolean.TRUE.equals(abandoned)) onOpponentConfirmedGone();
+            });
         }
 
         if (sharedViewModel.isChallenge()) {
@@ -110,9 +117,13 @@ public class SkockoFragment extends Fragment {
             enableButtons();
         } else {
             if (matchId != null && (isGuesser || opponentAbandoned)) {
+                // Ako je protivnik (koji je trebalo da bude pogađač u ovoj rundi) već
+                // napustio partiju, odmah označavamo njegov potez kao završen (neuspešan)
+                // kako bismo bez čekanja prešli na fazu prisutnog igrača (izazivača).
+                boolean skipAbsentGuesserTurn = opponentAbandoned && !isGuesser;
                 Map<String, Object> data = new HashMap<>();
                 data.put("secretCombination", Arrays.asList(viewModel.secretCombination));
-                data.put("playerTurnDone", false);
+                data.put("playerTurnDone", skipAbsentGuesserTurn);
                 data.put("playerSolved", false);
                 data.put("roundFinished", false);
                 gameStateRepo.set(matchId, gameKey, data);
@@ -241,6 +252,7 @@ public class SkockoFragment extends Fragment {
         tvRoundInfo.setText("Vreme isteklo! Protivnik ima 10 sekundi.");
         writeGuesserStats(false, -1, 0);
         writeGuesserTurnDone(false);
+        if (opponentAbandoned) finalizeRoundNoChallenger();
     }
 
     private void onConfirmClicked() {
@@ -306,7 +318,17 @@ public class SkockoFragment extends Fragment {
             tvRoundInfo.setText("Nisi pogodio/la. Protivnik ima 10 sekundi.");
             writeGuesserStats(false, -1, 0);
             writeGuesserTurnDone(false);
+            if (opponentAbandoned) finalizeRoundNoChallenger();
         }
+    }
+
+    private void finalizeRoundNoChallenger() {
+        // Izazivač (protivnik) je napustio partiju - ne čekamo njegov pokušaj od 10 sekundi.
+        if (matchId == null) return;
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("challengerPoints", 0);
+        updates.put("roundFinished", true);
+        gameStateRepo.update(matchId, gameKey, updates);
     }
 
     private void writeGuesserStats(boolean solved, int solvedAtAttempt, int points) {
@@ -557,9 +579,8 @@ public class SkockoFragment extends Fragment {
                     com.google.firebase.auth.FirebaseAuth.getInstance().getUid()
             ).addOnSuccessListener(wasAbandoned -> {
                 if (Boolean.TRUE.equals(wasAbandoned)) {
-                    Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
                     sharedViewModel.setOpponentAbandoned(true);
-                    checkAndSkipOpponentTurn();
+                    onOpponentConfirmedGone();
                 } else {
                     opponentAbandoned = false;
                     enableButtons();
@@ -569,17 +590,32 @@ public class SkockoFragment extends Fragment {
         }
     }
 
+    private void onOpponentConfirmedGone() {
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
+        }
+        boolean firstTime = !opponentAbandoned;
+        opponentAbandoned = true;
+        if (firstTime && isAdded()) {
+            Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
+        }
+        checkAndSkipOpponentTurn();
+    }
+
     private void checkAndSkipOpponentTurn() {
         if (localRoundDone) return;
-        if (!isGuesser && !challengerPhaseActive) {
-            writeGuesserTurnDone(false);
-        } else if (isGuesser && challengerPhaseActive) {
-            if (matchId != null) {
-                Map<String, Object> updates = new HashMap<>();
-                updates.put("challengerPoints", 0);
-                updates.put("roundFinished", true);
-                gameStateRepo.update(matchId, gameKey, updates);
+        if (!isGuesser) {
+            // Runda pripada protivniku (pogađaču) koji je napustio partiju - ako još
+            // nisam ušao u svoju fazu izazivača, lažiramo njegov "nije pogodio" signal
+            // kako bih odmah dobio priliku (ne čekamo protivnikovih 30 sekundi uzalud).
+            if (!challengerPhaseActive) {
+                writeGuesserTurnDone(false);
             }
+        } else if (viewModel.playerTurnFinished) {
+            // Ja sam pogađač i već sam završio svoj potez; izazivač (protivnik) je
+            // napustio partiju pa ne čekamo njegovih 10 sekundi.
+            finalizeRoundNoChallenger();
         }
     }
 

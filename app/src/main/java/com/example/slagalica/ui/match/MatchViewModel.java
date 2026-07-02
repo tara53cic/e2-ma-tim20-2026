@@ -109,6 +109,15 @@ public class MatchViewModel extends ViewModel {
                             if (currentUserId == null) currentUserId = matchRepository.getCurrentUserId();
                             if (currentUserId != null) isPlayer1 = currentUserId.equals(match.getPlayer1_id());
 
+                            // Trenutna detekcija napuštanja partije: čim protivnik napusti
+                            // MatchFragment (vidi markLeftIfMidMatch), ovo se odmah odrazi ovde -
+                            // bez čekanja na spori online/inGame polling u pojedinačnim igrama.
+                            if (match.getAbandonedBy() != null && currentUserId != null
+                                    && !match.getAbandonedBy().equals(currentUserId)
+                                    && !Boolean.TRUE.equals(isOpponentAbandoned.getValue())) {
+                                isOpponentAbandoned.postValue(true);
+                            }
+
                             if (match.getPlayer2_id() != null && "WAITING".equals(currentFragment.getValue())) {
                                 currentFragment.postValue("MOJ_BROJ_R1");
                             }
@@ -322,6 +331,18 @@ public class MatchViewModel extends ViewModel {
         if (timer != null) timer.cancel();
         if (matchListener != null) matchListener.remove();
         if (challengeResultListener != null) challengeResultListener.remove();
+    }
+
+    // Poziva se kada MatchFragment nestane sa ekrana (npr. igrač se vratio na PlayFragment
+    // ili napustio aplikaciju) dok je partija i dalje aktivna. Trenutno upisuje ko je otišao,
+    // umesto da se oslanja isključivo na spori online/inGame heartbeat u pojedinačnim igrama.
+    public void markLeftIfMidMatch() {
+        if (isChallenge || matchId == null) return;
+        String phase = currentFragment.getValue();
+        if (phase == null || "WAITING".equals(phase) || "FINISHED".equals(phase)) return;
+        if (currentUserId == null) currentUserId = matchRepository.getCurrentUserId();
+        if (currentUserId == null) return;
+        matchRepository.markPlayerLeft(matchId, currentUserId);
     }
 
     public void shouldDeductToken(boolean isFriendly) {

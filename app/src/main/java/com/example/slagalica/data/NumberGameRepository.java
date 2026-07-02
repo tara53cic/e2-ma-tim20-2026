@@ -33,14 +33,14 @@ public class NumberGameRepository {
         Map<String, Object> updates = new HashMap<>();
         updates.put("targetNumber", value);
         updates.put("lockPhase", 1);
-        return gameDoc(matchId, gameKey).update(updates);
+        return gameDoc(matchId, gameKey).set(updates, com.google.firebase.firestore.SetOptions.merge());
     }
 
     public Task<Void> lockNumber(String matchId, String gameKey, int slot, String value) {
         Map<String, Object> updates = new HashMap<>();
         updates.put("num" + slot, value);
         updates.put("lockPhase", slot + 2);
-        return gameDoc(matchId, gameKey).update(updates);
+        return gameDoc(matchId, gameKey).set(updates, com.google.firebase.firestore.SetOptions.merge());
     }
 
     public Task<Void> submitResult(String matchId, String gameKey, boolean isPlayer1, long result) {
@@ -48,7 +48,7 @@ public class NumberGameRepository {
         String prefix = isPlayer1 ? "p1" : "p2";
         updates.put(prefix + "Result", result);
         updates.put(prefix + "Submitted", true);
-        return gameDoc(matchId, gameKey).update(updates);
+        return gameDoc(matchId, gameKey).set(updates, com.google.firebase.firestore.SetOptions.merge());
     }
 
     public ListenerRegistration listen(String matchId, String gameKey,

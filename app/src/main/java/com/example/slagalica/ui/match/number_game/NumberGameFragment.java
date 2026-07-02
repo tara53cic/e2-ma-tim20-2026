@@ -48,6 +48,7 @@ public class NumberGameFragment extends Fragment {
     private boolean isActivePlayer;
     private boolean initialTimerStarted = false;
     private boolean statsWritten = false;
+    private boolean tookOverRound = false;
 
     @Nullable
     @Override
@@ -161,10 +162,23 @@ public class NumberGameFragment extends Fragment {
         view.findViewById(R.id.btnConfirmCalc).setOnClickListener(v -> submitGameResult());
 
         if (matchId != null) {
-            if (sharedViewModel.getIsOpponentAbandoned().getValue() != null && sharedViewModel.getIsOpponentAbandoned().getValue()) {
+            boolean opponentAlreadyGone = Boolean.TRUE.equals(sharedViewModel.getIsOpponentAbandoned().getValue());
+            if (opponentAlreadyGone) {
                 opponentAbandoned = true;
-                writeOpponentDummyResult();
+                // Igrač čiji je red da "vrti" brojeve je otišao pre nego što je runda
+                // uopšte počela - preuzimamo kontrolu da bismo uopšte imali cilj/brojeve.
+                if (!isActivePlayer) {
+                    isActivePlayer = true;
+                    tookOverRound = true;
+                }
             }
+
+            // Trenutna reakcija: čim MatchViewModel (na osnovu match dokumenta) ustanovi
+            // da je protivnik napustio partiju, reagujemo odmah - ne čekamo spori
+            // online/inGame polling koji GameStateMonitor radi u pozadini.
+            sharedViewModel.getIsOpponentAbandoned().observe(getViewLifecycleOwner(), abandoned -> {
+                if (Boolean.TRUE.equals(abandoned)) onOpponentConfirmedGone();
+            });
 
             if (sharedViewModel.isChallenge()) {
                 isActivePlayer = true;
@@ -175,6 +189,7 @@ public class NumberGameFragment extends Fragment {
             } else if (isActivePlayer) {
                 long now = System.currentTimeMillis();
                 numberGameRepo.initRound(matchId, gameKey, now).addOnSuccessListener(v -> {
+                    if (opponentAbandoned) writeOpponentDummyResult();
                     viewModel.startTargetShuffle();
                     sharedViewModel.startRoundTimer(5, () -> {
                         if (isActivePlayer) handleStopClicked();
@@ -252,11 +267,21 @@ public class NumberGameFragment extends Fragment {
             Boolean p2sub = snapshot.getBoolean("p2Submitted");
             boolean oppAbandonedGlobal = Boolean.TRUE.equals(sharedViewModel.getIsOpponentAbandoned().getValue());
 
-            boolean bothInOrAbandoned = (Boolean.TRUE.equals(p1sub) && Boolean.TRUE.equals(p2sub))
-                    || (oppAbandonedGlobal && (Boolean.TRUE.equals(p1sub) || Boolean.TRUE.equals(p2sub)));
+            boolean iAmP1 = sharedViewModel.getIsPlayer1();
+            boolean mySubmitted = iAmP1 ? Boolean.TRUE.equals(p1sub) : Boolean.TRUE.equals(p2sub);
+            boolean oppSubmitted = iAmP1 ? Boolean.TRUE.equals(p2sub) : Boolean.TRUE.equals(p1sub);
+
+            // VAŽNO: runda se završava tek kad JA pošaljem svoj rezultat - odsutnost
+            // protivnika nikad ne sme sama po sebi da završi rundu pre nego što sam ja
+            // uopšte stigao da odigram (inače bi runda 0 preskočila igru za mene).
+            boolean bothInOrAbandoned = mySubmitted && (oppSubmitted || oppAbandonedGlobal);
 
             if (bothInOrAbandoned && !resultFinalized) {
                 resultFinalized = true;
+                if (abandonmentTimer != null) {
+                    abandonmentTimer.cancel();
+                    abandonmentTimer = null;
+                }
 
                 Long p1res = snapshot.getLong("p1Result");
                 Long p2res = snapshot.getLong("p2Result");
@@ -320,10 +345,9 @@ public class NumberGameFragment extends Fragment {
     private void submitGameResult() {
         if (viewModel.getGameState().getValue() == NumberGameViewModel.GameState.FINISHED) return;
 
-        if (abandonmentTimer != null) {
-            abandonmentTimer.cancel();
-            abandonmentTimer = null;
-        }
+        // NAPOMENA: ne gasimo ovde abandonmentTimer - moj podnesak ne znači da je runda
+        // gotova (i dalje čekamo protivnikov rezultat), pa moramo nastaviti da pratimo
+        // da li je on možda napustio partiju dok ja čekam njega.
 
         String expr = viewModel.submitResult();
         Double result = evaluateMathExpressionUseCase.evaluate(expr);
@@ -402,15 +426,56 @@ public class NumberGameFragment extends Fragment {
                     com.google.firebase.auth.FirebaseAuth.getInstance().getUid()
             ).addOnSuccessListener(wasAbandoned -> {
                 if (Boolean.TRUE.equals(wasAbandoned)) {
-                    Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
                     sharedViewModel.setOpponentAbandoned(true);
-                    writeOpponentDummyResult();
+                    onOpponentConfirmedGone();
                 } else {
                     opponentAbandoned = false;
                     checkOpponentStatus();
                 }
             });
         }
+    }
+
+    private void onOpponentConfirmedGone() {
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
+        }
+        boolean firstTime = !opponentAbandoned;
+        opponentAbandoned = true;
+        if (firstTime && isAdded()) {
+            Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
+        }
+        if (resultFinalized || viewModel.getGameState().getValue() == NumberGameViewModel.GameState.FINISHED) {
+            return;
+        }
+        if (!isActivePlayer) {
+            // Igrač koji je "vrteo" brojeve za ovu rundu je napustio partiju usred
+            // runde - preuzimamo kontrolu da bismo mogli sami da dobijemo cilj/brojeve.
+            takeOverAsActivePlayer();
+        } else {
+            writeOpponentDummyResult();
+        }
+    }
+
+    private void takeOverAsActivePlayer() {
+        if (tookOverRound || matchId == null) return;
+        tookOverRound = true;
+        isActivePlayer = true;
+
+        long now = System.currentTimeMillis();
+        numberGameRepo.initRound(matchId, gameKey, now).addOnSuccessListener(v -> {
+            writeOpponentDummyResult();
+            viewModel.startTargetShuffle();
+            View root = getView();
+            if (root != null) {
+                View btnStop = root.findViewById(R.id.btnStopTarget);
+                if (btnStop != null) btnStop.setVisibility(View.VISIBLE);
+            }
+            sharedViewModel.startRoundTimer(5, () -> {
+                if (isActivePlayer) handleStopClicked();
+            });
+        });
     }
 
     private void writeOpponentDummyResult() {

@@ -86,10 +86,17 @@ public class WhoKnowsFragment extends Fragment {
         
         if (sharedViewModel.isChallenge()) {
             opponentAbandoned = false;
-        } else if (sharedViewModel.getIsOpponentAbandoned().getValue() != null && sharedViewModel.getIsOpponentAbandoned().getValue()) {
-            opponentAbandoned = true;
         } else {
-            startAbandonmentMonitoring();
+            if (Boolean.TRUE.equals(sharedViewModel.getIsOpponentAbandoned().getValue())) {
+                opponentAbandoned = true;
+            } else {
+                startAbandonmentMonitoring();
+            }
+            // Trenutna reakcija na osnovu match dokumenta (vidi MatchViewModel), ne čekamo
+            // isključivo spori online/inGame polling.
+            sharedViewModel.getIsOpponentAbandoned().observe(getViewLifecycleOwner(), abandoned -> {
+                if (Boolean.TRUE.equals(abandoned)) onOpponentConfirmedGone();
+            });
         }
 
         tvQuestionNumber = view.findViewById(R.id.tvQuestionNumber);
@@ -399,15 +406,28 @@ public class WhoKnowsFragment extends Fragment {
                     com.google.firebase.auth.FirebaseAuth.getInstance().getUid()
             ).addOnSuccessListener(wasAbandoned -> {
                 if (Boolean.TRUE.equals(wasAbandoned)) {
-                    Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
                     sharedViewModel.setOpponentAbandoned(true);
-                    writeOpponentDummyAnswers();
+                    onOpponentConfirmedGone();
                 } else {
                     opponentAbandoned = false;
                     startAbandonmentMonitoring();
                 }
             });
         }
+    }
+
+    private void onOpponentConfirmedGone() {
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
+        }
+        boolean firstTime = !opponentAbandoned;
+        opponentAbandoned = true;
+        if (firstTime && isAdded()) {
+            Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
+        }
+        if (gameAdvanceCalled) return;
+        writeOpponentDummyAnswers();
     }
 
     private void writeOpponentDummyAnswers() {

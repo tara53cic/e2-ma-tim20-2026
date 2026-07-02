@@ -135,10 +135,17 @@ public class MatchingFragment extends Fragment {
 
         if (sharedViewModel.isChallenge()) {
             opponentAbandoned = false;
-        } else if (sharedViewModel.getIsOpponentAbandoned().getValue() != null && sharedViewModel.getIsOpponentAbandoned().getValue()) {
-            opponentAbandoned = true;
         } else {
-            startAbandonmentMonitoring(); // Pokrećemo monitoring samo ako već nisu otišli
+            if (Boolean.TRUE.equals(sharedViewModel.getIsOpponentAbandoned().getValue())) {
+                opponentAbandoned = true;
+            } else {
+                startAbandonmentMonitoring(); // Pokrećemo monitoring samo ako već nisu otišli
+            }
+            // Trenutna reakcija na osnovu match dokumenta (vidi MatchViewModel), ne čekamo
+            // isključivo spori online/inGame polling.
+            sharedViewModel.getIsOpponentAbandoned().observe(getViewLifecycleOwner(), abandoned -> {
+                if (Boolean.TRUE.equals(abandoned)) onOpponentConfirmedGone();
+            });
         }
 
         if (sharedViewModel.isChallenge() || (isRound1 && sharedViewModel.getIsPlayer1())) {
@@ -592,15 +599,62 @@ public class MatchingFragment extends Fragment {
                     com.google.firebase.auth.FirebaseAuth.getInstance().getUid()
             ).addOnSuccessListener(wasAbandoned -> {
                 if (Boolean.TRUE.equals(wasAbandoned)) {
-                    Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
                     sharedViewModel.setOpponentAbandoned(true);
-                    checkAndSkipOpponentTurn();
+                    onOpponentConfirmedGone();
                 } else {
                     opponentAbandoned = false;
                     startAbandonmentMonitoring();
                 }
             });
         }
+    }
+
+    private void onOpponentConfirmedGone() {
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
+        }
+        boolean firstTime = !opponentAbandoned;
+        opponentAbandoned = true;
+        if (firstTime && isAdded()) {
+            Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
+        }
+        if (roundDone) return;
+
+        if (!dataLoaded) {
+            // Podaci za spojnice (obe runde) se objavljuju JEDNOM za ceo meč. Ne znamo
+            // pouzdano da li je to već urađeno (npr. tokom Runde 1) ili ne - zato prvo
+            // proveravamo da li dokument već postoji, umesto da slepo pozovemo
+            // loadAndPublish (što bi prepisalo već objavljene/odigrane podatke novim
+            // nasumičnim zagonetkama i izazvalo "dupliranje"/nekonzistentnost).
+            ensureMatchingDataLoaded();
+        } else {
+            checkAndSkipOpponentTurn();
+        }
+    }
+
+    private void ensureMatchingDataLoaded() {
+        if (matchId == null || dataLoaded) return;
+        if (dataListener != null) {
+            dataListener.remove();
+            dataListener = null;
+        }
+        FirebaseFirestore.getInstance()
+                .collection("matches").document(matchId)
+                .collection("games").document("matching_data")
+                .get()
+                .addOnSuccessListener(snap -> {
+                    if (dataLoaded || !isAdded()) return;
+                    if (snap.exists()) {
+                        viewModel.loadFromMatch(matchId);
+                    } else {
+                        viewModel.loadAndPublish(matchId);
+                    }
+                    viewModel.getIsLoading().observe(getViewLifecycleOwner(), loading -> {
+                        if (loading == null || loading) return;
+                        onDataReady();
+                    });
+                });
     }
 
     private void checkAndSkipOpponentTurn() {
