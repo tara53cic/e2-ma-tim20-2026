@@ -48,7 +48,15 @@ public class NumberGameFragment extends Fragment {
     private boolean isActivePlayer;
     private boolean initialTimerStarted = false;
     private boolean statsWritten = false;
-    private boolean tookOverRound = false;
+    // Da li JA (pasivni igrač za ovu rundu) trenutno vodim odbrojavanje umesto
+    // odsutnog aktivnog igrača. Ne dobijam dugme za zaustavljanje - brojevi se
+    // zaustavljaju isključivo kad tajmer istekne (baš kao da je aktivni igrač tu
+    // i pustio tajmer da istekne).
+    private boolean autoAdvance = false;
+    // Da li je runda uopšte već započeta u bazi (bilo od strane aktivnog igrača,
+    // bilo od strane mene kroz autoAdvance) - da ne bismo pozvali initRound()
+    // (koji briše postojeći napredak) preko već započete runde.
+    private boolean roundInitialized = false;
 
     @Nullable
     @Override
@@ -126,7 +134,7 @@ public class NumberGameFragment extends Fragment {
             if (index >= 0 && viewModel.getGameState().getValue() == NumberGameViewModel.GameState.SHUFFLE_NUMBERS) {
                 btnStopTarget.setVisibility(isActivePlayer ? View.VISIBLE : View.GONE);
                 sharedViewModel.startRoundTimer(5, () -> {
-                    if (isActivePlayer) handleStopClicked();
+                    if (isActivePlayer || autoAdvance) handleStopClicked();
                 });
             }
         });
@@ -165,12 +173,6 @@ public class NumberGameFragment extends Fragment {
             boolean opponentAlreadyGone = Boolean.TRUE.equals(sharedViewModel.getIsOpponentAbandoned().getValue());
             if (opponentAlreadyGone) {
                 opponentAbandoned = true;
-                // Igrač čiji je red da "vrti" brojeve je otišao pre nego što je runda
-                // uopšte počela - preuzimamo kontrolu da bismo uopšte imali cilj/brojeve.
-                if (!isActivePlayer) {
-                    isActivePlayer = true;
-                    tookOverRound = true;
-                }
             }
 
             // Trenutna reakcija: čim MatchViewModel (na osnovu match dokumenta) ustanovi
@@ -199,10 +201,16 @@ public class NumberGameFragment extends Fragment {
                     checkOpponentStatus();
                 });
             } else {
+                // Ovo NIJE moja runda - normalno samo posmatram i pratim brojeve/cilj
+                // koje "vrti" pravi aktivni igrač preko Firestore-a.
                 viewModel.startTargetShuffle();
                 listenToGameState();
-                // ← DODANO: Proveravamo da li je protivnik aktivan (aktivni igrač)
                 checkOpponentStatus();
+                if (opponentAbandoned) {
+                    // Aktivni igrač za ovu rundu je odsutan od samog početka - moram
+                    // sam da pokrenem/vodim odbrojavanje umesto njega (bez dugmeta).
+                    ensureAutoAdvance();
+                }
             }
         } else {
             viewModel.startTargetShuffle();
@@ -231,6 +239,7 @@ public class NumberGameFragment extends Fragment {
             Long lockPhase = snapshot.getLong("lockPhase");
             Long startTime = snapshot.getLong("startTime");
             if (lockPhase == null) return;
+            roundInitialized = true;
 
             if (!isActivePlayer) {
                 if (lockPhase == 0 && startTime != null && !initialTimerStarted) {
@@ -238,7 +247,9 @@ public class NumberGameFragment extends Fragment {
                     long elapsed = System.currentTimeMillis() - startTime;
                     int remaining = (int) (5 - (elapsed / 1000));
                     if (remaining > 0) {
-                        sharedViewModel.startRoundTimer(remaining, () -> {});
+                        sharedViewModel.startRoundTimer(remaining, () -> {
+                            if (autoAdvance) handleStopClicked();
+                        });
                     }
                 }
 
@@ -450,30 +461,43 @@ public class NumberGameFragment extends Fragment {
             return;
         }
         if (!isActivePlayer) {
-            // Igrač koji je "vrteo" brojeve za ovu rundu je napustio partiju usred
-            // runde - preuzimamo kontrolu da bismo mogli sami da dobijemo cilj/brojeve.
-            takeOverAsActivePlayer();
+            // Igrač koji je "vrteo" brojeve za ovu rundu je napustio partiju - runda se
+            // NASTAVLJA (ne resetuje se), samo ja preuzimam odbrojavanje umesto njega.
+            ensureAutoAdvance();
         } else {
+            // Ovo je moja runda - ništa se ne menja u toku igre, samo ne čekamo
+            // protivnikov rezultat kad dođe vreme za slanje rešenja.
             writeOpponentDummyResult();
         }
     }
 
-    private void takeOverAsActivePlayer() {
-        if (tookOverRound || matchId == null) return;
-        tookOverRound = true;
-        isActivePlayer = true;
+    private void ensureAutoAdvance() {
+        if (autoAdvance || matchId == null) return;
+        autoAdvance = true;
 
+        if (roundInitialized) {
+            // Runda je već u toku (neki brojevi su možda već zaključani od strane
+            // igrača koji je sad otišao) - NE resetujemo je, samo preuzimamo
+            // odbrojavanje za trenutni korak koji je ostao nezaključan.
+            NumberGameViewModel.GameState state = viewModel.getGameState().getValue();
+            if (state == NumberGameViewModel.GameState.SHUFFLE_TARGET
+                    || state == NumberGameViewModel.GameState.SHUFFLE_NUMBERS) {
+                sharedViewModel.startRoundTimer(5, () -> {
+                    if (autoAdvance) handleStopClicked();
+                });
+            }
+            // Ako je stanje već PLAYING/FINISHED, tajmer za to (60s odn. ništa) već
+            // ispravno radi svoj posao - ne diramo ga.
+            return;
+        }
+
+        // Runda uopšte nije ni počela (aktivni igrač je otišao pre nego što je
+        // ijedan broj zaključao) - ja je pokrećem od nule, jedini put kad se ovo radi.
         long now = System.currentTimeMillis();
         numberGameRepo.initRound(matchId, gameKey, now).addOnSuccessListener(v -> {
             writeOpponentDummyResult();
-            viewModel.startTargetShuffle();
-            View root = getView();
-            if (root != null) {
-                View btnStop = root.findViewById(R.id.btnStopTarget);
-                if (btnStop != null) btnStop.setVisibility(View.VISIBLE);
-            }
             sharedViewModel.startRoundTimer(5, () -> {
-                if (isActivePlayer) handleStopClicked();
+                if (autoAdvance) handleStopClicked();
             });
         });
     }
