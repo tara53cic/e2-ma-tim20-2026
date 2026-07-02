@@ -59,7 +59,10 @@ public class MatchResultViewModel extends ViewModel {
             matchRepository.getMatch(matchId).addOnSuccessListener(matchDoc -> {
                 if (matchDoc.exists()) {
                     boolean isFriendly = matchDoc.getBoolean("friendly") != null && matchDoc.getBoolean("friendly");
-                    processStats(currentUser.getUid(), myScore, opponentScore, isFriendly, isAbandonment, isTimeout);
+                    // Ako je meč zavrsen jer je protivnik napustio partiju, ovaj klijent
+                    // je uvek onaj koji je ostao - tretiramo ga kao pobednika bez obzira na skor.
+                    boolean wasAbandoned = isAbandonment || matchDoc.getString("abandonedBy") != null;
+                    processStats(currentUser.getUid(), myScore, opponentScore, isFriendly, wasAbandoned, isTimeout);
                 } else {
                     processStats(currentUser.getUid(), myScore, opponentScore, false, isAbandonment, isTimeout);
                 }

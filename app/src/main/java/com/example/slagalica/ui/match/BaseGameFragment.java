@@ -83,12 +83,16 @@ public abstract class BaseGameFragment extends Fragment {
     private void handleOpponentAbandonment() {
         if (!gameActive) return;
 
-        gameActive = false;
-        if (heartbeatTimer != null) heartbeatTimer.cancel();
-
         gameStateMonitor.detectAndHandleAbandonment(matchId, opponentUserId, currentUserId)
-                .addOnSuccessListener(v -> {
-                    onOpponentAbandoned();
+                .addOnSuccessListener(wasAbandoned -> {
+                    if (Boolean.TRUE.equals(wasAbandoned)) {
+                        gameActive = false;
+                        if (heartbeatTimer != null) heartbeatTimer.cancel();
+                        onOpponentAbandoned();
+                    } else {
+                        // Optimistic retry or resume monitoring
+                        startAbandonmentMonitoring();
+                    }
                 });
     }
 

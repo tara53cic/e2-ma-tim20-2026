@@ -40,7 +40,11 @@
     <fragment
         android:id="@+id/nav_region"
         android:name="com.example.slagalica.ui.region.RegionFragment"
-        android:label="Regioni" />
+        android:label="Regioni">
+        <action
+            android:id="@+id/action_nav_region_to_matchFragment"
+            app:destination="@id/matchFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/matchFragment"

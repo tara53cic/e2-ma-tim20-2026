@@ -25,11 +25,31 @@ public class UserRepository {
                 .update("tokens", FieldValue.increment(-amount));
     }
 
+    public Task<Void> deductStars(int amount) {
+        String uid = auth.getUid();
+        if (uid == null) return null;
+        return db.collection("users").document(uid)
+                .update("stars", FieldValue.increment(-amount));
+    }
+
     public Task<Void> addTokens(int amount) {
         String uid = auth.getUid();
         if (uid == null) return null;
         return db.collection("users").document(uid)
                 .update("tokens", FieldValue.increment(amount));
+    }
+
+    public Task<Void> addStars(int amount) {
+        String uid = auth.getUid();
+        if (uid == null) return null;
+        return db.collection("users").document(uid)
+                .update("stars", FieldValue.increment(amount));
+    }
+
+    public Task<Void> addMonthlyStars(String uid, int amount) {
+        if (uid == null) return null;
+        return db.collection("users").document(uid)
+                .update("monthlyStars", FieldValue.increment(amount));
     }
 
     public Task<DocumentSnapshot> getUser(String uid) {

@@ -6,41 +6,69 @@
     android:orientation="vertical"
     android:background="@color/background">
 
-    <!-- Tab dugmad: Mapa / Rang lista -->
-    <LinearLayout
+    <!-- Tab dugmad: Mapa / Rang lista / Čet / Izazovi -->
+    <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="12dp">
-
-        <TextView
-            android:id="@+id/btnTabMap"
-            android:layout_width="0dp"
+        android:scrollbars="none">
+        <LinearLayout
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="🗺 Mapa"
-            android:gravity="center"
-            android:padding="10dp"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginEnd="6dp"
-            android:background="@drawable/bg_filter_selected"
-            android:textColor="@color/background"/>
+            android:orientation="horizontal"
+            android:padding="12dp">
 
-        <TextView
-            android:id="@+id/btnTabLeaderboard"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="🏆 Rang lista"
-            android:gravity="center"
-            android:padding="10dp"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginStart="6dp"
-            android:background="@drawable/bg_filter_unselected"
-            android:textColor="@color/primary"/>
-    </LinearLayout>
+            <TextView
+                android:id="@+id/btnTabMap"
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:text="🗺 Mapa"
+                android:gravity="center"
+                android:padding="10dp"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/bg_filter_selected"
+                android:textColor="@color/background"/>
+
+            <TextView
+                android:id="@+id/btnTabLeaderboard"
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:text="🏆 Rang"
+                android:gravity="center"
+                android:padding="10dp"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/bg_filter_unselected"
+                android:textColor="@color/primary"/>
+
+            <TextView
+                android:id="@+id/btnTabChat"
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:text="💬 Čet"
+                android:gravity="center"
+                android:padding="10dp"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/bg_filter_unselected"
+                android:textColor="@color/primary"/>
+
+            <TextView
+                android:id="@+id/btnTabChallenges"
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:text="⚔️ Izazovi"
+                android:gravity="center"
+                android:padding="10dp"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:background="@drawable/bg_filter_unselected"
+                android:textColor="@color/primary"/>
+        </LinearLayout>
+    </HorizontalScrollView>
 
     <!-- TAB 1: Mapa -->
     <LinearLayout
@@ -138,6 +166,83 @@
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvRegionLeaderboard"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+    </LinearLayout>
+
+    <!-- TAB 3: Čet -->
+    <LinearLayout
+        android:id="@+id/tabChat"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvChat"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:padding="8dp"
+            android:clipToPadding="false"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="8dp"
+            android:background="@color/surface">
+
+            <EditText
+                android:id="@+id/etChatMessage"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Unesi poruku..."
+                android:padding="12dp"
+                android:background="@drawable/bg_input_field"
+                android:maxLines="3"
+                android:textSize="14sp"/>
+
+            <ImageButton
+                android:id="@+id/btnSendChat"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_send"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:tint="@color/primary"
+                android:layout_marginStart="8dp"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- TAB 4: Izazovi -->
+    <LinearLayout
+        android:id="@+id/tabChallenges"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:padding="12dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCreateChallenge"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Kreiraj izazov"
+            app:cornerRadius="8dp"
+            android:layout_marginBottom="12dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Aktivni izazovi u tvom regionu"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvChallenges"
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
     </LinearLayout>

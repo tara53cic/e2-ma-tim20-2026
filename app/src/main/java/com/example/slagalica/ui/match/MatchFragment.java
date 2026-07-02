@@ -64,8 +64,13 @@ public class MatchFragment extends Fragment {
 
         if (getArguments() != null) {
             String matchId = getArguments().getString("MATCH_ID");
+            String challengeId = getArguments().getString("CHALLENGE_ID");
+            String regionId = getArguments().getString("REGION_ID");
+
             if (matchId != null) {
                 matchViewModel.initMatch(matchId);
+            } else if (challengeId != null && regionId != null) {
+                matchViewModel.initChallenge(challengeId, regionId);
             } else {
                 Navigation.findNavController(view).popBackStack();
                 return;
@@ -135,10 +140,8 @@ public class MatchFragment extends Fragment {
         });
 
         if (savedInstanceState == null) {
-
-            matchViewModel.shouldDeductToken();
-            userRepository.setInGame(true);
         }
+        userRepository.setInGame(true);
 
         View bottomNav = requireActivity().findViewById(R.id.bottom_nav);
         if (bottomNav != null) bottomNav.setVisibility(View.GONE);
@@ -147,7 +150,9 @@ public class MatchFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        userRepository.setInGame(false);
+        if (getActivity() != null && !getActivity().isChangingConfigurations()) {
+            userRepository.setInGame(false);
+        }
         View bottomNav = requireActivity().findViewById(R.id.bottom_nav);
         if (bottomNav != null) bottomNav.setVisibility(View.VISIBLE);
     }

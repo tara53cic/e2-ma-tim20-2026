@@ -19,7 +19,9 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.slagalica.R;
 import com.example.slagalica.data.GameStateRepository;
+import com.example.slagalica.data.MatchRepository;
 import com.example.slagalica.data.UserStatsRepository;
+import com.example.slagalica.domain.service.GameStateMonitor;
 import com.example.slagalica.ui.match.MatchViewModel;
 import com.google.firebase.firestore.ListenerRegistration;
 
@@ -35,6 +37,10 @@ public class SkockoFragment extends Fragment {
     private GameStateRepository gameStateRepo;
     private final UserStatsRepository statsRepo = new UserStatsRepository();
     private ListenerRegistration gameListener;
+    private GameStateMonitor gameStateMonitor;
+    private java.util.Timer abandonmentTimer;
+    private String opponentUserId;
+    private boolean opponentAbandoned = false;
 
     private String matchId, gameKey;
     private boolean isGuesser;
@@ -75,6 +81,7 @@ public class SkockoFragment extends Fragment {
         viewModel = new ViewModelProvider(this).get(SkockoViewModel.class);
         sharedViewModel = new ViewModelProvider(requireActivity()).get(MatchViewModel.class);
         gameStateRepo = new GameStateRepository();
+        gameStateMonitor = new GameStateMonitor();
 
         matchId = sharedViewModel.getMatchId();
         String phase = sharedViewModel.getCurrentFragment().getValue();
@@ -88,17 +95,31 @@ public class SkockoFragment extends Fragment {
         setupSymbolButtons();
         btnConfirm.setOnClickListener(v -> onConfirmClicked());
 
-        if (matchId != null && isGuesser) {
-            Map<String, Object> data = new HashMap<>();
-            data.put("secretCombination", Arrays.asList(viewModel.secretCombination));
-            data.put("playerTurnDone", false);
-            data.put("playerSolved", false);
-            data.put("roundFinished", false);
-            gameStateRepo.set(matchId, gameKey, data);
+        if (sharedViewModel.isChallenge()) {
+            opponentAbandoned = false;
+        } else if (sharedViewModel.getIsOpponentAbandoned().getValue() != null && sharedViewModel.getIsOpponentAbandoned().getValue()) {
+            opponentAbandoned = true;
+        } else {
+            startAbandonmentMonitoring();
         }
 
-        listenToGameState();
-        disableButtons();
+        if (sharedViewModel.isChallenge()) {
+            isGuesser = true;
+            tvRoundInfo.setText("Pogodi kombinaciju!");
+            startMainTimerIfNeeded(true, false);
+            enableButtons();
+        } else {
+            if (matchId != null && (isGuesser || opponentAbandoned)) {
+                Map<String, Object> data = new HashMap<>();
+                data.put("secretCombination", Arrays.asList(viewModel.secretCombination));
+                data.put("playerTurnDone", false);
+                data.put("playerSolved", false);
+                data.put("roundFinished", false);
+                gameStateRepo.set(matchId, gameKey, data);
+            }
+            listenToGameState();
+            disableButtons();
+        }
 
         if (isGuesser) {
             tvRoundInfo.setText("Tvoja partija – 6 pokušaja");
@@ -175,6 +196,10 @@ public class SkockoFragment extends Fragment {
 
             if (Boolean.TRUE.equals(finished) && !localRoundDone) {
                 localRoundDone = true;
+                if (abandonmentTimer != null) {
+                    abandonmentTimer.cancel();
+                    abandonmentTimer = null;
+                }
                 stopTimer();
                 disableButtons();
 
@@ -285,6 +310,12 @@ public class SkockoFragment extends Fragment {
     }
 
     private void writeGuesserTurnDone(boolean solved) {
+        if (sharedViewModel.isChallenge()) {
+            localRoundDone = true;
+            writeStats(solved, viewModel.calculatePlayerPoints(), 0);
+            sharedViewModel.advanceGamePhase();
+            return;
+        }
         if (matchId == null) return;
         Map<String, Object> updates = new HashMap<>();
         updates.put("playerTurnDone", true);
@@ -482,11 +513,76 @@ public class SkockoFragment extends Fragment {
 
     private void stopTimer() { sharedViewModel.stopTimer(); }
 
+    private void startAbandonmentMonitoring() {
+        if (matchId == null || opponentAbandoned) return;
+        loadOpponentUserId();
+
+        if (abandonmentTimer != null) abandonmentTimer.cancel();
+        abandonmentTimer = gameStateMonitor.startAbandonmentWatch(
+                () -> opponentUserId,
+                () -> {
+                    if (!isAdded() || localRoundDone || opponentAbandoned) return;
+                    opponentAbandoned = true;
+                    handleOpponentAbandonment();
+                }
+        );
+    }
+
+    private void loadOpponentUserId() {
+        if (matchId == null) return;
+        new MatchRepository().getMatch(matchId).addOnSuccessListener(doc -> {
+            if (doc.exists()) {
+                boolean isP1 = sharedViewModel.getIsPlayer1();
+                opponentUserId = isP1 ? doc.getString("player2_id") : doc.getString("player1_id");
+            }
+        });
+    }
+
+    private void handleOpponentAbandonment() {
+        if (localRoundDone) return;
+        
+        if (matchId != null && opponentUserId != null) {
+            gameStateMonitor.detectAndHandleAbandonment(
+                    matchId,
+                    opponentUserId,
+                    com.google.firebase.auth.FirebaseAuth.getInstance().getUid()
+            ).addOnSuccessListener(wasAbandoned -> {
+                if (Boolean.TRUE.equals(wasAbandoned)) {
+                    Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
+                    sharedViewModel.setOpponentAbandoned(true);
+                    checkAndSkipOpponentTurn();
+                } else {
+                    opponentAbandoned = false;
+                    enableButtons();
+                    startAbandonmentMonitoring();
+                }
+            });
+        }
+    }
+
+    private void checkAndSkipOpponentTurn() {
+        if (localRoundDone) return;
+        if (!isGuesser && !challengerPhaseActive) {
+            writeGuesserTurnDone(false);
+        } else if (isGuesser && challengerPhaseActive) {
+            if (matchId != null) {
+                Map<String, Object> updates = new HashMap<>();
+                updates.put("challengerPoints", 0);
+                updates.put("roundFinished", true);
+                gameStateRepo.update(matchId, gameKey, updates);
+            }
+        }
+    }
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         stopTimer();
         handler.removeCallbacksAndMessages(null);
         if (gameListener != null) gameListener.remove();
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
+        }
     }
 }

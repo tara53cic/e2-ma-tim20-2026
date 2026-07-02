@@ -40,6 +40,7 @@ public class MatchingFragment extends Fragment {
     private ListenerRegistration dataListener;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private GameStateMonitor gameStateMonitor;
+    private java.util.Timer abandonmentTimer;
     private String opponentUserId;
     private boolean opponentAbandoned = false;
 
@@ -94,12 +95,16 @@ public class MatchingFragment extends Fragment {
         viewModel       = new ViewModelProvider(this).get(MatchingViewModel.class);
         sharedViewModel = new ViewModelProvider(requireActivity()).get(MatchViewModel.class);
         gameStateRepo   = new GameStateRepository();
+        gameStateMonitor = new GameStateMonitor();
 
         matchId = sharedViewModel.getMatchId();
         String fragPhase = sharedViewModel.getCurrentFragment().getValue();
         isRound1   = "SPOJNICE_R1".equals(fragPhase);
         gameKey    = isRound1 ? "matching_r1" : "matching_r2";
         iAmStarter = isRound1 ? sharedViewModel.getIsPlayer1() : !sharedViewModel.getIsPlayer1();
+        if (sharedViewModel.isChallenge()) {
+            iAmStarter = true;
+        }
 
         if (sharedViewModel.getIsPlayer1()) {
             C_MINE = C_PLAYER1;
@@ -128,7 +133,15 @@ public class MatchingFragment extends Fragment {
         tvTitle.setText("Učitavanje...");
         tvTurn.setText("");
 
-        if (isRound1 && sharedViewModel.getIsPlayer1()) {
+        if (sharedViewModel.isChallenge()) {
+            opponentAbandoned = false;
+        } else if (sharedViewModel.getIsOpponentAbandoned().getValue() != null && sharedViewModel.getIsOpponentAbandoned().getValue()) {
+            opponentAbandoned = true;
+        } else {
+            startAbandonmentMonitoring(); // Pokrećemo monitoring samo ako već nisu otišli
+        }
+
+        if (sharedViewModel.isChallenge() || (isRound1 && sharedViewModel.getIsPlayer1())) {
             viewModel.loadAndPublish(matchId);
             viewModel.getIsLoading().observe(getViewLifecycleOwner(), loading -> {
                 if (loading == null || loading) return;
@@ -145,35 +158,45 @@ public class MatchingFragment extends Fragment {
                 .collection("matches").document(matchId)
                 .collection("games").document("matching_data")
                 .addSnapshotListener((snap, e) -> {
-                    if (e != null || snap == null || !snap.exists() || dataLoaded) return;
-                    viewModel.loadFromMatch(matchId);
-                    viewModel.getIsLoading().observe(getViewLifecycleOwner(), loading -> {
-                        if (loading == null || loading) return;
-                        onDataReady();
-                    });
+                    if (e != null || snap == null || dataLoaded) return;
+                    
+                    if (snap.exists()) {
+                        viewModel.loadFromMatch(matchId);
+                        viewModel.getIsLoading().observe(getViewLifecycleOwner(), loading -> {
+                            if (loading == null || loading) return;
+                            onDataReady();
+                        });
+                    } else if (opponentAbandoned) {
+
+                        viewModel.loadAndPublish(matchId);
+                        viewModel.getIsLoading().observe(getViewLifecycleOwner(), loading -> {
+                            if (loading == null || loading) return;
+                            onDataReady();
+                        });
+                    }
                 });
     }
 
     private void onDataReady() {
-        if (dataLoaded) return;
+        if (dataLoaded || !isAdded()) return;
 
         List<MatchingData> rounds = viewModel.getRounds().getValue();
-        MatchingData data = null;
+        MatchingData currentRoundData = null;
         if (rounds != null) {
-            if (isRound1 && rounds.size() >= 1)       data = rounds.get(0);
-            else if (!isRound1 && rounds.size() >= 2) data = rounds.get(1);
+            if (isRound1 && rounds.size() >= 1)       currentRoundData = rounds.get(0);
+            else if (!isRound1 && rounds.size() >= 2) currentRoundData = rounds.get(1);
         }
 
-        if (data == null || data.getLeft() == null
-                || data.getRight() == null || data.getCorrectMap() == null) {
+        if (currentRoundData == null || currentRoundData.getLeft() == null
+                || currentRoundData.getRight() == null || currentRoundData.getCorrectMap() == null) {
             tvTitle.setText("Greška: nema podataka!");
             Toast.makeText(getContext(), "Greška pri učitavanju spojnica!", Toast.LENGTH_LONG).show();
             return;
         }
 
-        List<String> l = data.getLeft();
-        List<String> r = data.getRight();
-        List<Long>   m = data.getCorrectMap();
+        List<String> l = currentRoundData.getLeft();
+        List<String> r = currentRoundData.getRight();
+        List<Long>   m = currentRoundData.getCorrectMap();
         for (int i = 0; i < 5; i++) {
             if (i < l.size()) currentLeft[i]    = l.get(i);
             if (i < r.size()) currentRight[i]   = r.get(i);
@@ -186,17 +209,22 @@ public class MatchingFragment extends Fragment {
             leftButtons[i].setOnClickListener(v  -> onLeft(idx));
             rightButtons[i].setOnClickListener(v -> onRight(idx));
         }
-        tvTitle.setText(data.getTitle() != null ? data.getTitle().toUpperCase() : "SPOJNICE");
+        tvTitle.setText(currentRoundData.getTitle() != null ? currentRoundData.getTitle().toUpperCase() : "SPOJNICE");
         dataLoaded = true;
 
-        if (sharedViewModel.getIsPlayer1() && matchId != null) {
+        if ((iAmStarter || opponentAbandoned) && matchId != null) {
             Map<String, Object> init = new HashMap<>();
             init.put("phase", "STARTER");
             init.put("roundDone", false);
             gameStateRepo.set(matchId, gameKey, init);
         }
 
-        startListening();
+        if (sharedViewModel.isChallenge()) {
+            localPhase = "STARTER";
+            applyPhase();
+        } else {
+            startListening();
+        }
         startAbandonmentMonitoring();  // DODANO
     }
 
@@ -240,6 +268,10 @@ public class MatchingFragment extends Fragment {
             Boolean done = snap.getBoolean("roundDone");
             if (Boolean.TRUE.equals(done) && !roundDone) {
                 roundDone = true;
+                if (abandonmentTimer != null) {
+                    abandonmentTimer.cancel();
+                    abandonmentTimer = null;
+                }
                 writeStats();
                 sharedViewModel.stopTimer();
                 setAllEnabled(false);
@@ -257,6 +289,15 @@ public class MatchingFragment extends Fragment {
     private void applyPhase() {
         if (!isAdded() || roundDone) return;
         String rnd = isRound1 ? "Runda 1" : "Runda 2";
+
+        if (opponentAbandoned) {
+            if (("STARTER".equals(localPhase) && !iAmStarter) ||
+                ("SECOND".equals(localPhase) && iAmStarter)) {
+                if ("STARTER".equals(localPhase)) writePhase("SECOND");
+                else writeFinish();
+                return;
+            }
+        }
 
         if ("STARTER".equals(localPhase)) {
             if (iAmStarter) {
@@ -402,6 +443,11 @@ public class MatchingFragment extends Fragment {
     }
 
     private void writePhase(String phase) {
+        if (sharedViewModel.isChallenge()) {
+            localPhase = phase;
+            applyPhase();
+            return;
+        }
         if (matchId == null) return;
         Map<String, Object> u = new HashMap<>();
         u.put("phase", phase);
@@ -409,6 +455,11 @@ public class MatchingFragment extends Fragment {
     }
 
     private void writeFinish() {
+        if (sharedViewModel.isChallenge()) {
+            writeStats();
+            sharedViewModel.advanceGamePhase();
+            return;
+        }
         if (roundDone || matchId == null) return;
         Map<String, Object> u = new HashMap<>();
         u.put("phase", "DONE");
@@ -427,6 +478,7 @@ public class MatchingFragment extends Fragment {
 
     private boolean canClick() {
         if (!dataLoaded || roundDone || localPhase.isEmpty()) return false;
+        if (sharedViewModel.isChallenge()) return true;
         if ("STARTER".equals(localPhase)) return iAmStarter;
         if ("SECOND".equals(localPhase))  return !iAmStarter;
         return false;
@@ -492,32 +544,14 @@ public class MatchingFragment extends Fragment {
         if (matchId == null || opponentAbandoned) return;
         loadOpponentUserId();
 
-        new java.util.Timer().scheduleAtFixedRate(
-                new java.util.TimerTask() {
-                    @Override
-                    public void run() {
-                        if (roundDone || opponentAbandoned) {
-                            this.cancel();
-                            return;
-                        }
-
-                        if (opponentUserId == null) {
-                            loadOpponentUserId();
-                            return;
-                        }
-
-                        gameStateMonitor.isPlayerActive(opponentUserId)
-                                .addOnSuccessListener(isActive -> {
-                                    if (!isActive && !opponentAbandoned) {
-                                        opponentAbandoned = true;
-                                        this.cancel();
-                                        handleOpponentAbandonment();
-                                    }
-                                });
-                    }
-                },
-                3000,
-                5000
+        if (abandonmentTimer != null) abandonmentTimer.cancel();
+        abandonmentTimer = gameStateMonitor.startAbandonmentWatch(
+                () -> opponentUserId,
+                () -> {
+                    if (!isAdded() || roundDone || opponentAbandoned) return;
+                    opponentAbandoned = true;
+                    handleOpponentAbandonment();
+                }
         );
     }
 
@@ -537,16 +571,41 @@ public class MatchingFragment extends Fragment {
     }
 
     private void handleOpponentAbandonment() {
-        Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
         if (matchId != null && opponentUserId != null) {
             gameStateMonitor.detectAndHandleAbandonment(
                     matchId,
                     opponentUserId,
                     com.google.firebase.auth.FirebaseAuth.getInstance().getUid()
-            ).addOnSuccessListener(v -> {
-                roundDone = true;
-                sharedViewModel.advanceGamePhase();
+            ).addOnSuccessListener(wasAbandoned -> {
+                if (Boolean.TRUE.equals(wasAbandoned)) {
+                    Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
+                    sharedViewModel.setOpponentAbandoned(true);
+                    checkAndSkipOpponentTurn();
+                } else {
+                    opponentAbandoned = false;
+                    startAbandonmentMonitoring();
+                }
             });
+        }
+    }
+
+    private void checkAndSkipOpponentTurn() {
+        if (roundDone) return;
+        if ("STARTER".equals(localPhase) && !iAmStarter) {
+            writePhase("SECOND");
+        } else if ("SECOND".equals(localPhase) && iAmStarter) {
+            writeFinish();
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (gameListener != null) gameListener.remove();
+        if (dataListener != null) dataListener.remove();
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
         }
     }
 }

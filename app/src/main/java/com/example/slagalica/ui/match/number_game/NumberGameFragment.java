@@ -161,7 +161,18 @@ public class NumberGameFragment extends Fragment {
         view.findViewById(R.id.btnConfirmCalc).setOnClickListener(v -> submitGameResult());
 
         if (matchId != null) {
-            if (isActivePlayer) {
+            if (sharedViewModel.getIsOpponentAbandoned().getValue() != null && sharedViewModel.getIsOpponentAbandoned().getValue()) {
+                opponentAbandoned = true;
+                writeOpponentDummyResult();
+            }
+
+            if (sharedViewModel.isChallenge()) {
+                isActivePlayer = true;
+                viewModel.startTargetShuffle();
+                sharedViewModel.startRoundTimer(5, () -> {
+                    handleStopClicked();
+                });
+            } else if (isActivePlayer) {
                 long now = System.currentTimeMillis();
                 numberGameRepo.initRound(matchId, gameKey, now).addOnSuccessListener(v -> {
                     viewModel.startTargetShuffle();
@@ -239,7 +250,12 @@ public class NumberGameFragment extends Fragment {
 
             Boolean p1sub = snapshot.getBoolean("p1Submitted");
             Boolean p2sub = snapshot.getBoolean("p2Submitted");
-            if (Boolean.TRUE.equals(p1sub) && Boolean.TRUE.equals(p2sub) && !resultFinalized) {
+            boolean oppAbandonedGlobal = Boolean.TRUE.equals(sharedViewModel.getIsOpponentAbandoned().getValue());
+
+            boolean bothInOrAbandoned = (Boolean.TRUE.equals(p1sub) && Boolean.TRUE.equals(p2sub))
+                    || (oppAbandonedGlobal && (Boolean.TRUE.equals(p1sub) || Boolean.TRUE.equals(p2sub)));
+
+            if (bothInOrAbandoned && !resultFinalized) {
                 resultFinalized = true;
 
                 Long p1res = snapshot.getLong("p1Result");
@@ -290,18 +306,36 @@ public class NumberGameFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
         if (gameListener != null) gameListener.remove();
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
+        }
     }
 
     private boolean resultFinalized = false;
     private String opponentUserId;
     private boolean opponentAbandoned = false;
+    private java.util.Timer abandonmentTimer;
 
     private void submitGameResult() {
         if (viewModel.getGameState().getValue() == NumberGameViewModel.GameState.FINISHED) return;
 
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
+        }
+
         String expr = viewModel.submitResult();
         Double result = evaluateMathExpressionUseCase.evaluate(expr);
         long resLong = result != null ? Math.round(result) : 0L;
+        int score = scoringService.calculateScore(expr, Integer.parseInt(viewModel.getTargetNumber().getValue()));
+
+        if (sharedViewModel.isChallenge()) {
+            writeStats(true, score);
+            sharedViewModel.addCurrentPlayerPoints(score);
+            sharedViewModel.advanceGamePhase();
+            return;
+        }
 
         if (matchId != null) {
             numberGameRepo.submitResult(matchId, gameKey, sharedViewModel.getIsPlayer1(), resLong);
@@ -328,38 +362,16 @@ public class NumberGameFragment extends Fragment {
 
     private void checkOpponentStatus() {
         if (matchId == null || opponentAbandoned) return;
+        if (opponentUserId == null) loadOpponentUserId();
 
-
-        new java.util.Timer().scheduleAtFixedRate(
-                new java.util.TimerTask() {
-                    private java.util.Timer timer = new java.util.Timer();
-                    @Override
-                    public void run() {
-                        if (viewModel != null &&
-                            viewModel.getGameState().getValue() == NumberGameViewModel.GameState.FINISHED) {
-                            this.cancel();
-                            return;
-                        }
-
-
-                        if (opponentUserId == null) {
-                            loadOpponentUserId();
-                            return;
-                        }
-
-
-                        gameStateMonitor.isPlayerActive(opponentUserId)
-                                .addOnSuccessListener(isActive -> {
-                                    if (!isActive && !opponentAbandoned) {
-                                        opponentAbandoned = true;
-                                        this.cancel();
-                                        handleOpponentAbandonment();
-                                    }
-                                });
-                    }
-                },
-                3000,
-                5000
+        if (abandonmentTimer != null) abandonmentTimer.cancel();
+        abandonmentTimer = gameStateMonitor.startAbandonmentWatch(
+                () -> opponentUserId,
+                () -> {
+                    if (!isAdded() || opponentAbandoned) return;
+                    opponentAbandoned = true;
+                    handleOpponentAbandonment();
+                }
         );
     }
 
@@ -382,19 +394,27 @@ public class NumberGameFragment extends Fragment {
 
 
     private void handleOpponentAbandonment() {
-        Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
-
-
         if (matchId != null && opponentUserId != null) {
             gameStateMonitor.detectAndHandleAbandonment(
                     matchId,
                     opponentUserId,
                     com.google.firebase.auth.FirebaseAuth.getInstance().getUid()
-            ).addOnSuccessListener(v -> {
-
-                sharedViewModel.stopTimer();
-                sharedViewModel.advanceGamePhase();
+            ).addOnSuccessListener(wasAbandoned -> {
+                if (Boolean.TRUE.equals(wasAbandoned)) {
+                    Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
+                    sharedViewModel.setOpponentAbandoned(true);
+                    writeOpponentDummyResult();
+                } else {
+                    opponentAbandoned = false;
+                    checkOpponentStatus();
+                }
             });
         }
+    }
+
+    private void writeOpponentDummyResult() {
+        if (matchId == null) return;
+        boolean opponentIsP1 = !sharedViewModel.getIsPlayer1();
+        numberGameRepo.submitResult(matchId, gameKey, opponentIsP1, 0L);
     }
 }

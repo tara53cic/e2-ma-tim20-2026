@@ -69,7 +69,14 @@ public class MatchResultFragment extends Fragment {
 
         boolean isPlayer1 = sharedViewModel.getIsPlayer1();
         String matchId = sharedViewModel.getMatchId();
-        resultViewModel.calculateAndSaveStats(isPlayer1, p1Score, p2Score, matchId, false, false);
+        
+        if (sharedViewModel.isChallenge()) {
+            tvResultInfo.setText("Izazov završen!");
+            tvStarsWon.setText("Rezultat sačuvan.");
+            tvTokensWon.setText("Proverite tabelu.");
+        } else {
+            resultViewModel.calculateAndSaveStats(isPlayer1, p1Score, p2Score, matchId, false, false);
+        }
 
         btnHome.setOnClickListener(v -> {
             FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();

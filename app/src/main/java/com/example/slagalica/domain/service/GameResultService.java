@@ -53,7 +53,8 @@ public class GameResultService {
 
 
         int finalMyScore = isTimeout ? 0 : myScore;
-        boolean isWinner = finalMyScore >= opponentScore;
+        // Ako je protivnik napustio partiju, igrač koji je ostao pobeđuje bez obzira na skor.
+        boolean isWinner = isAbandonment || finalMyScore >= opponentScore;
 
 
         int starsChangeBase = isWinner ? 10 : -10;

@@ -34,24 +34,26 @@ public class GameStateMonitor {
                         Boolean online = doc.getBoolean("online");
                         Boolean inGame = doc.getBoolean("inGame");
 
-
                         return Boolean.TRUE.equals(online) && Boolean.TRUE.equals(inGame);
                     }
-                    return false;
+                    // Ako ne uspemo da dođemo do podataka (mreža npr), 
+                    // optimistično pretpostavljamo da je igrač i dalje tu.
+                    return true;
                 });
     }
 
 
-    public Task<Void> detectAndHandleAbandonment(String matchId, String expectedPlayerId, String otherPlayerId) {
+    public Task<Boolean> detectAndHandleAbandonment(String matchId, String expectedPlayerId, String otherPlayerId) {
         return isPlayerActive(expectedPlayerId)
                 .continueWithTask(task -> {
                     Boolean isActive = task.getResult();
 
                     if (Boolean.FALSE.equals(isActive)) {
-                        // Igrač je napustio igru
-                        return handleAbandonmentInternal(matchId, expectedPlayerId, otherPlayerId);
+                        // Igrač je definitivno napustio igru
+                        return handleAbandonmentInternal(matchId, expectedPlayerId, otherPlayerId)
+                                .continueWith(t -> true);
                     }
-                    return com.google.android.gms.tasks.Tasks.forResult(null);
+                    return com.google.android.gms.tasks.Tasks.forResult(false);
                 });
     }
 
@@ -75,6 +77,48 @@ public class GameStateMonitor {
                 3000,
                 3000
         );
+    }
+
+    private static final int ABANDONMENT_INITIAL_DELAY_MS = 5000;
+    private static final int ABANDONMENT_POLL_INTERVAL_MS = 6000;
+    // Povećavamo broj potrebnih promašaja kako bismo bili manje osetljivi
+    // na kratke prekide u mreži ili lag Firebase-a.
+    private static final int ABANDONMENT_REQUIRED_MISSES = 5;
+
+    /**
+     * Periodično proverava da li je protivnik aktivan i poziva {@code onAbandoned}
+     * tek nakon {@link #ABANDONMENT_REQUIRED_MISSES} uzastopnih neuspešnih provera.
+     * Vraća {@link java.util.Timer} koji pozivalac mora otkazati (timer.cancel())
+     * kad se fragment/igra uništi ili runda normalno završi.
+     */
+    public java.util.Timer startAbandonmentWatch(java.util.function.Supplier<String> opponentIdSupplier,
+                                                  Runnable onAbandoned) {
+        java.util.Timer timer = new java.util.Timer();
+        final int[] missStreak = {0};
+        timer.scheduleAtFixedRate(
+                new java.util.TimerTask() {
+                    @Override
+                    public void run() {
+                        String opponentId = opponentIdSupplier.get();
+                        if (opponentId == null) return;
+
+                        isPlayerActive(opponentId).addOnSuccessListener(isActive -> {
+                            if (isActive) {
+                                missStreak[0] = 0;
+                                return;
+                            }
+                            missStreak[0]++;
+                            if (missStreak[0] >= ABANDONMENT_REQUIRED_MISSES) {
+                                this.cancel();
+                                onAbandoned.run();
+                            }
+                        });
+                    }
+                },
+                ABANDONMENT_INITIAL_DELAY_MS,
+                ABANDONMENT_POLL_INTERVAL_MS
+        );
+        return timer;
     }
 
 

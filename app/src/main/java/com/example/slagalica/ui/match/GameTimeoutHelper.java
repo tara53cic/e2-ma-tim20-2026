@@ -47,10 +47,10 @@ public class GameTimeoutHelper {
 
 
     public void checkIfOpponentAbandoned(Runnable onAbandonedCallback) {
-        gameStateMonitor.isPlayerActive(getOpponentUserId())
-                .addOnSuccessListener(isActive -> {
-                    if (!isActive) {
-
+        gameStateMonitor.detectAndHandleAbandonment(matchId, getOpponentUserId(), 
+                com.google.firebase.auth.FirebaseAuth.getInstance().getUid())
+                .addOnSuccessListener(wasAbandoned -> {
+                    if (Boolean.TRUE.equals(wasAbandoned)) {
                         showToast("Protivnik je napustio igru!");
                         if (onAbandonedCallback != null) {
                             onAbandonedCallback.run();

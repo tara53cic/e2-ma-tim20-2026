@@ -16,8 +16,10 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.slagalica.R;
 import com.example.slagalica.data.GameStateRepository;
+import com.example.slagalica.data.MatchRepository;
 import com.example.slagalica.data.UserStatsRepository;
 import com.example.slagalica.domain.models.StepByStep;
+import com.example.slagalica.domain.service.GameStateMonitor;
 import com.example.slagalica.ui.match.MatchViewModel;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -35,6 +37,10 @@ public class StepByStepFragment extends Fragment {
     private GameStateRepository gameStateRepo;
     private final UserStatsRepository statsRepo = new UserStatsRepository();
     private ListenerRegistration gameListener;
+    private GameStateMonitor gameStateMonitor;
+    private java.util.Timer abandonmentTimer;
+    private String opponentUserId;
+    private boolean opponentAbandoned = false;
 
     private List<TextView> steps = new ArrayList<>();
     private TextInputEditText etStepAnswer;
@@ -66,6 +72,7 @@ public class StepByStepFragment extends Fragment {
         sharedViewModel = new ViewModelProvider(requireActivity()).get(MatchViewModel.class);
         stepByStepViewModel = new ViewModelProvider(this).get(StepByStepViewModel.class);
         gameStateRepo = new GameStateRepository();
+        gameStateMonitor = new GameStateMonitor();
 
         matchId = sharedViewModel.getMatchId();
         String phase = sharedViewModel.getCurrentFragment().getValue();
@@ -87,6 +94,14 @@ public class StepByStepFragment extends Fragment {
 
         etStepAnswer.setEnabled(isActivePlayer);
         btnConfirmStep.setEnabled(isActivePlayer);
+
+        if (sharedViewModel.isChallenge()) {
+            opponentAbandoned = false;
+        } else if (sharedViewModel.getIsOpponentAbandoned().getValue() != null && sharedViewModel.getIsOpponentAbandoned().getValue()) {
+            opponentAbandoned = true;
+        } else {
+            startAbandonmentMonitoring();
+        }
 
         stepByStepViewModel.getIsLoading().observe(getViewLifecycleOwner(), loading -> {
             if (loading != null && !loading) {
@@ -173,6 +188,12 @@ public class StepByStepFragment extends Fragment {
         if (tvTurnIndicator != null) {
             tvTurnIndicator.setText("Protivnik je na potezu");
         }
+
+        if (opponentAbandoned && !isActivePlayer) {
+            publishOutcome(false, 0);
+            return;
+        }
+
         sharedViewModel.startRoundTimer(10, () -> {
             if (!roundDone) publishOutcome(false, 0);
         });
@@ -187,6 +208,12 @@ public class StepByStepFragment extends Fragment {
         if (roundDone) return;
         roundDone = true;
         sharedViewModel.stopTimer();
+
+        if (sharedViewModel.isChallenge()) {
+            writeStats(correct, currentRevealedStep, points);
+            showAnswerAndAdvance(correct, points);
+            return;
+        }
 
         if (isActivePlayer && !isOpponentPhase) {
             writeStats(correct, currentRevealedStep, points);
@@ -216,6 +243,7 @@ public class StepByStepFragment extends Fragment {
     }
 
     private void listenToGameState() {
+        if (sharedViewModel.isChallenge()) return;
         if (matchId == null) return;
         if (isActivePlayer) {
             Map<String, Object> init = new HashMap<>();
@@ -258,7 +286,60 @@ public class StepByStepFragment extends Fragment {
         });
     }
 
+    private void startAbandonmentMonitoring() {
+        if (matchId == null || opponentAbandoned) return;
+        loadOpponentUserId();
+
+        if (abandonmentTimer != null) abandonmentTimer.cancel();
+        abandonmentTimer = gameStateMonitor.startAbandonmentWatch(
+                () -> opponentUserId,
+                () -> {
+                    if (!isAdded() || roundDone || opponentAbandoned) return;
+                    opponentAbandoned = true;
+                    handleOpponentAbandonment();
+                }
+        );
+    }
+
+    private void loadOpponentUserId() {
+        if (matchId == null) return;
+        new MatchRepository().getMatch(matchId).addOnSuccessListener(doc -> {
+            if (doc.exists()) {
+                boolean isP1 = sharedViewModel.getIsPlayer1();
+                opponentUserId = isP1 ? doc.getString("player2_id") : doc.getString("player1_id");
+            }
+        });
+    }
+
+    private void handleOpponentAbandonment() {
+        if (roundDone) return;
+        
+        if (matchId != null && opponentUserId != null) {
+            gameStateMonitor.detectAndHandleAbandonment(
+                    matchId,
+                    opponentUserId,
+                    com.google.firebase.auth.FirebaseAuth.getInstance().getUid()
+            ).addOnSuccessListener(wasAbandoned -> {
+                if (Boolean.TRUE.equals(wasAbandoned)) {
+                    Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
+                    sharedViewModel.setOpponentAbandoned(true);
+                    // If it was opponent's phase, finish the round
+                    if (isOpponentPhase && !isActivePlayer) {
+                        publishOutcome(false, 0);
+                    }
+                } else {
+                    opponentAbandoned = false;
+                    startAbandonmentMonitoring();
+                }
+            });
+        }
+    }
+
     private void showAnswerAndAdvance(boolean correct, int points) {
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
+        }
         btnConfirmStep.setEnabled(false);
         etStepAnswer.setText(currentAnswer);
         if (correct && isActivePlayer) {
@@ -277,5 +358,9 @@ public class StepByStepFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
         if (gameListener != null) gameListener.remove();
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
+        }
     }
 }
