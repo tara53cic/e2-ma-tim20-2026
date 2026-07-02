@@ -31,6 +31,12 @@ public class MatchingViewModel extends ViewModel {
                     // Uzmi 2 različita round-a
                     List<MatchingData> selected = new ArrayList<>(
                             all.size() >= 2 ? all.subList(0, 2) : all);
+                    if (matchId == null) {
+                        // Izazov (solo partija) nema match dokument u koji bi se objavilo.
+                        rounds.setValue(selected);
+                        isLoading.setValue(false);
+                        return;
+                    }
                     repository.publishRounds(matchId, selected)
                             .addOnSuccessListener(v -> {
                                 rounds.setValue(selected);

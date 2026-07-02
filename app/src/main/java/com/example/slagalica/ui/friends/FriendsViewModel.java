@@ -156,22 +156,50 @@ public class FriendsViewModel extends ViewModel {
             );
 
             final String finalUsername = myUsername;
-            requestRepo.sendRequest(request).addOnSuccessListener(ref -> {
-                String requestId = ref.getId();
-                pendingRequestId.setValue(requestId);
 
-                notificationRepo.createNotificationForUser(
-                        friend.getUid(),
-                        "Zahtev za partiju",
-                        finalUsername + " te poziva na prijateljsku partiju!",
-                        NotificationType.OTHER
-                );
+            // VAŽNO: Prvo proveravamo da li je prijatelj stvarno online
+            // Prijatelj je online samo ako je: online=true I inGame=false
+            // (ako je inGame=true, on je već u igri - nemamo mogućnost приглас)
+            friendRepo.getUserById(friend.getUid()).addOnSuccessListener(friendDoc -> {
+                if (!friendDoc.exists()) {
+                    errorMessage.setValue("Prijatelj nije pronađen.");
+                    return;
+                }
 
-                listenForResponse(requestId);
+                Boolean isOnline = friendDoc.getBoolean("online");
+                Boolean isInGame = friendDoc.getBoolean("inGame");
 
-                startAutoDeclineTimer(requestId);
+                // Prijatelj je dostupan samo ako je online i NOT inGame
+                boolean isFriendAvailable = Boolean.TRUE.equals(isOnline) &&
+                                           !Boolean.TRUE.equals(isInGame);
 
-            }).addOnFailureListener(e -> errorMessage.setValue("Greška pri slanju zahteva."));
+                requestRepo.sendRequest(request).addOnSuccessListener(ref -> {
+                    String requestId = ref.getId();
+                    pendingRequestId.setValue(requestId);
+
+                    if (isFriendAvailable) {
+                        // Prijatelj je online - notifikacija će biti prikazana kao dialog
+                        notificationRepo.createNotificationForUser(
+                                friend.getUid(),
+                                "Zahtev za prijateljsku partiju",
+                                finalUsername + " te poziva na prijateljsku partiju!",
+                                NotificationType.GAME_INVITATION
+                        );
+                    } else {
+                        // Prijatelj NIJE online - pošalji sistemsku notifikaciju za kasnije
+                        notificationRepo.createNotificationForUser(
+                                friend.getUid(),
+                                "Zahtev za prijateljsku partiju",
+                                finalUsername + " te je pozvao na partiju. Klini da prihvatiš!",
+                                NotificationType.GAME_INVITATION
+                        );
+                    }
+
+                    listenForResponse(requestId);
+                    startAutoDeclineTimer(requestId);
+
+                }).addOnFailureListener(e -> errorMessage.setValue("Greška pri slanju zahteva."));
+            }).addOnFailureListener(e -> errorMessage.setValue("Greška pri proveri statusa prijatelja."));
         });
     }
 

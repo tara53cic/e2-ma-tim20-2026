@@ -20,7 +20,9 @@ import androidx.lifecycle.ViewModelProvider;
 import com.example.slagalica.R;
 import com.example.slagalica.data.GameStateRepository;
 import com.example.slagalica.data.AssociationsRepository;
+import com.example.slagalica.data.MatchRepository;
 import com.example.slagalica.data.UserStatsRepository;
+import com.example.slagalica.domain.service.GameStateMonitor;
 import com.example.slagalica.ui.match.MatchViewModel;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -41,6 +43,10 @@ public class AssociationsFragment extends Fragment {
     private final UserStatsRepository statsRepo = new UserStatsRepository();
 
     private ListenerRegistration gameListener;
+    private GameStateMonitor gameStateMonitor;
+    private java.util.Timer abandonmentTimer;
+    private String opponentUserId;
+    private boolean opponentAbandoned = false;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
 
@@ -81,6 +87,7 @@ public class AssociationsFragment extends Fragment {
 
         gameStateRepo = new GameStateRepository();
         associationRepo = new AssociationsRepository();
+        gameStateMonitor = new GameStateMonitor();
 
         matchId = sharedViewModel.getMatchId();
 
@@ -93,16 +100,44 @@ public class AssociationsFragment extends Fragment {
 
         btnSubmitAnswer.setOnClickListener(v -> checkAnswer());
 
-        initializeRoundIfNeeded();
-        listenToGameState();
+        if (sharedViewModel.isChallenge()) {
+            opponentAbandoned = false;
+        } else {
+            if (Boolean.TRUE.equals(sharedViewModel.getIsOpponentAbandoned().getValue())) {
+                opponentAbandoned = true;
+            } else {
+                startAbandonmentMonitoring();
+            }
+            // Trenutna reakcija na osnovu match dokumenta (vidi MatchViewModel), ne čekamo
+            // isključivo spori online/inGame polling.
+            sharedViewModel.getIsOpponentAbandoned().observe(getViewLifecycleOwner(), abandoned -> {
+                if (Boolean.TRUE.equals(abandoned)) onOpponentConfirmedGone();
+            });
+        }
+
+        if (sharedViewModel.isChallenge()) {
+            activeFirestorePlayer = 1; // Uvek ja
+            initializeRoundIfNeeded();
+            refreshInputState();
+            refreshFieldButtonsState();
+            startAssociationsTimerIfNeeded();
+        } else {
+            initializeRoundIfNeeded();
+            listenToGameState();
+        }
     }
 
     private void initializeRoundIfNeeded() {
-        boolean isInitiator = "assoc_r1".equals(gameKey)
+        if (sharedViewModel.isChallenge()) {
+            loadChallengePuzzle();
+            return;
+        }
+
+        boolean normallyInitiator = "assoc_r1".equals(gameKey)
                 ? sharedViewModel.getIsPlayer1()
                 : !sharedViewModel.getIsPlayer1();
 
-        if (matchId == null || !isInitiator) {
+        if (matchId == null || (!normallyInitiator && !opponentAbandoned)) {
             return;
         }
 
@@ -124,6 +159,43 @@ public class AssociationsFragment extends Fragment {
 
                     Map<String, Object> data = createInitialAssociationState(puzzleDoc);
                     gameStateRepo.set(matchId, gameKey, data);
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+
+                    Toast.makeText(
+                            requireContext(),
+                            "Greška pri učitavanju asocijacije.",
+                            Toast.LENGTH_SHORT
+                    ).show();
+                });
+    }
+
+    private void loadChallengePuzzle() {
+        associationRepo.fetchActivePuzzles()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (!isAdded()) return;
+
+                    if (querySnapshot.isEmpty()) {
+                        Toast.makeText(
+                                requireContext(),
+                                "Nema asocijacija u bazi.",
+                                Toast.LENGTH_SHORT
+                        ).show();
+                        return;
+                    }
+
+                    int randomIndex = new Random().nextInt(querySnapshot.size());
+                    DocumentSnapshot puzzleDoc = querySnapshot.getDocuments().get(randomIndex);
+
+                    // Puzzle dokument ima istu strukturu (fields/columnSolutions/finalSolution)
+                    // kao inicijalno stanje partije, pa se isti parser može ponovo iskoristiti.
+                    loadPuzzleFromSnapshot(puzzleDoc);
+                    activeFirestorePlayer = 1;
+                    associationsViewModel.currentPlayer = 1;
+
+                    refreshInputState();
+                    refreshFieldButtonsState();
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
@@ -183,6 +255,10 @@ public class AssociationsFragment extends Fragment {
             if (cp != null) {
                 activeFirestorePlayer = cp.intValue();
                 associationsViewModel.currentPlayer = activeFirestorePlayer;
+
+                if (opponentAbandoned && !isMyTurn() && !localRoundOver) {
+                    passTurn();
+                }
             }
 
             Long activeCol = snapshot.getLong("activeColumn");
@@ -525,6 +601,12 @@ public class AssociationsFragment extends Fragment {
     }
 
     private void passTurn() {
+        if (sharedViewModel.isChallenge()) {
+            clearInputs();
+            refreshInputState();
+            refreshFieldButtonsState();
+            return;
+        }
         int next = activeFirestorePlayer == 1 ? 2 : 1;
 
         Toast.makeText(
@@ -552,6 +634,12 @@ public class AssociationsFragment extends Fragment {
     }
 
     private void wrongAnswer() {
+        if (sharedViewModel.isChallenge()) {
+            clearInputs();
+            refreshInputState();
+            refreshFieldButtonsState();
+            return;
+        }
         int next = activeFirestorePlayer == 1 ? 2 : 1;
 
         Toast.makeText(
@@ -582,8 +670,18 @@ public class AssociationsFragment extends Fragment {
         if (localRoundOver || !isAdded()) {
             return;
         }
-
         localRoundOver = true;
+
+        if (sharedViewModel.isChallenge()) {
+            revealAll();
+            writeStats();
+            doAdvance();
+            return;
+        }
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
+        }
         sharedViewModel.stopTimer();
 
         writeStats();
@@ -622,6 +720,82 @@ public class AssociationsFragment extends Fragment {
                 sharedViewModel.advanceGamePhase();
             }
         }, 1000);
+    }
+
+    private void startAbandonmentMonitoring() {
+        if (matchId == null || opponentAbandoned) return;
+        loadOpponentUserId();
+
+        if (abandonmentTimer != null) abandonmentTimer.cancel();
+        abandonmentTimer = gameStateMonitor.startAbandonmentWatch(
+                () -> opponentUserId,
+                () -> {
+                    if (!isAdded() || localRoundOver || opponentAbandoned) return;
+                    opponentAbandoned = true;
+                    handleOpponentAbandonment();
+                }
+        );
+    }
+
+    private void loadOpponentUserId() {
+        if (matchId == null) return;
+        new MatchRepository().getMatch(matchId).addOnSuccessListener(doc -> {
+            if (doc.exists()) {
+                boolean isP1 = sharedViewModel.getIsPlayer1();
+                opponentUserId = isP1 ? doc.getString("player2_id") : doc.getString("player1_id");
+            }
+        });
+    }
+
+    private void handleOpponentAbandonment() {
+        if (localRoundOver) return;
+        
+        if (matchId != null && opponentUserId != null) {
+            gameStateMonitor.detectAndHandleAbandonment(
+                    matchId,
+                    opponentUserId,
+                    com.google.firebase.auth.FirebaseAuth.getInstance().getUid()
+            ).addOnSuccessListener(wasAbandoned -> {
+                if (Boolean.TRUE.equals(wasAbandoned)) {
+                    sharedViewModel.setOpponentAbandoned(true);
+                    onOpponentConfirmedGone();
+                } else {
+                    opponentAbandoned = false;
+                    refreshInputState();
+                    startAbandonmentMonitoring();
+                }
+            });
+        } else {
+            localRoundOver = true;
+            sharedViewModel.stopTimer();
+            doAdvance();
+        }
+    }
+
+    private void onOpponentConfirmedGone() {
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
+        }
+        boolean firstTime = !opponentAbandoned;
+        opponentAbandoned = true;
+        if (firstTime && isAdded()) {
+            Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
+        }
+        if (localRoundOver) return;
+
+        boolean normallyInitiator = sharedViewModel.isChallenge() || ("assoc_r1".equals(gameKey)
+                ? sharedViewModel.getIsPlayer1()
+                : !sharedViewModel.getIsPlayer1());
+
+        if (!associationsViewModel.puzzleLoaded) {
+            if (normallyInitiator) return; // moje sopstveno učitavanje je već u toku
+            // Protivnik je trebalo da objavi asocijaciju, ali je otišao pre
+            // nego što je to uradio - sami je učitavamo i objavljujemo.
+            initializeRoundIfNeeded();
+        } else if (!isMyTurn()) {
+            passTurn();
+        }
     }
 
     private boolean isMyTurn() {
@@ -766,6 +940,10 @@ public class AssociationsFragment extends Fragment {
 
         if (gameListener != null) {
             gameListener.remove();
+        }
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
         }
     }
 }

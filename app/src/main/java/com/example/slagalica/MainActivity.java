@@ -109,7 +109,9 @@ public class MainActivity extends AppCompatActivity {
         if (uid == null) return;
         java.util.Map<String, Object> data = new java.util.HashMap<>();
         data.put("online", online);
-        data.put("inGame", false);
+        if (!online) {
+            data.put("inGame", false);
+        }
         FirebaseFirestore.getInstance().collection("users").document(uid)
                 .set(data, com.google.firebase.firestore.SetOptions.merge());
     }

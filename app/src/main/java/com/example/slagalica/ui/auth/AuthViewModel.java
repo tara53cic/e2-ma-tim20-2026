@@ -127,8 +127,17 @@ public class AuthViewModel extends AndroidViewModel {
     }
 
     public void logout() {
-        repository.logout();
-        logoutSuccess.setValue(true);
+        String uid = com.google.firebase.auth.FirebaseAuth.getInstance().getUid();
+        if (uid != null) {
+            db.collection("users").document(uid).update("online", false, "inGame", false)
+                .addOnCompleteListener(task -> {
+                    repository.logout();
+                    logoutSuccess.setValue(true);
+                });
+        } else {
+            repository.logout();
+            logoutSuccess.setValue(true);
+        }
     }
 
     public void updatePassword(String oldPassword, String newPassword, String repeatNewPassword) {

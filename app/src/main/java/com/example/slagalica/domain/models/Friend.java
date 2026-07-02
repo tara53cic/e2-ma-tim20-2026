@@ -31,5 +31,5 @@ public class Friend {
     public void setOnline(boolean online) { this.online = online; }
     public boolean isInGame() { return inGame; }
     public void setInGame(boolean inGame) { this.inGame = inGame; }
-    public boolean canPlay() { return !inGame; }
+    public boolean canPlay() { return online && !inGame; }
 }

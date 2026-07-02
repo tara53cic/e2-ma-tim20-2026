@@ -16,8 +16,10 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.slagalica.R;
 import com.example.slagalica.data.GameStateRepository;
+import com.example.slagalica.data.MatchRepository;
 import com.example.slagalica.data.UserStatsRepository;
 import com.example.slagalica.domain.models.StepByStep;
+import com.example.slagalica.domain.service.GameStateMonitor;
 import com.example.slagalica.ui.match.MatchViewModel;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -35,6 +37,10 @@ public class StepByStepFragment extends Fragment {
     private GameStateRepository gameStateRepo;
     private final UserStatsRepository statsRepo = new UserStatsRepository();
     private ListenerRegistration gameListener;
+    private GameStateMonitor gameStateMonitor;
+    private java.util.Timer abandonmentTimer;
+    private String opponentUserId;
+    private boolean opponentAbandoned = false;
 
     private List<TextView> steps = new ArrayList<>();
     private TextInputEditText etStepAnswer;
@@ -48,6 +54,7 @@ public class StepByStepFragment extends Fragment {
     private boolean isOpponentPhase = false;
     private boolean roundDone = false;
     private boolean statsWritten = false;
+    private boolean roundReady = false;
 
     private String matchId;
     private String gameKey;
@@ -66,6 +73,7 @@ public class StepByStepFragment extends Fragment {
         sharedViewModel = new ViewModelProvider(requireActivity()).get(MatchViewModel.class);
         stepByStepViewModel = new ViewModelProvider(this).get(StepByStepViewModel.class);
         gameStateRepo = new GameStateRepository();
+        gameStateMonitor = new GameStateMonitor();
 
         matchId = sharedViewModel.getMatchId();
         String phase = sharedViewModel.getCurrentFragment().getValue();
@@ -88,6 +96,21 @@ public class StepByStepFragment extends Fragment {
         etStepAnswer.setEnabled(isActivePlayer);
         btnConfirmStep.setEnabled(isActivePlayer);
 
+        if (sharedViewModel.isChallenge()) {
+            opponentAbandoned = false;
+        } else {
+            if (Boolean.TRUE.equals(sharedViewModel.getIsOpponentAbandoned().getValue())) {
+                opponentAbandoned = true;
+            } else {
+                startAbandonmentMonitoring();
+            }
+            // Trenutna reakcija na osnovu match dokumenta (vidi MatchViewModel), ne čekamo
+            // isključivo spori online/inGame polling.
+            sharedViewModel.getIsOpponentAbandoned().observe(getViewLifecycleOwner(), abandoned -> {
+                if (Boolean.TRUE.equals(abandoned)) onOpponentConfirmedGone();
+            });
+        }
+
         stepByStepViewModel.getIsLoading().observe(getViewLifecycleOwner(), loading -> {
             if (loading != null && !loading) {
                 List<StepByStep> games = stepByStepViewModel.getGames().getValue();
@@ -105,12 +128,20 @@ public class StepByStepFragment extends Fragment {
     }
 
     private void setupRound() {
+        roundReady = true;
         if (isActivePlayer) {
             btnConfirmStep.setOnClickListener(v -> checkAnswer());
         }
 
         currentRevealedStep = 0;
         isOpponentPhase = false;
+
+        if (!isActivePlayer && opponentAbandoned) {
+            // Runda pripada igraču koji je već napustio partiju - odmah otvaramo
+            // sve korake i dajemo priliku prisutnom igraču da pogodi.
+            takeOverAbandonedOwnerRound();
+            return;
+        }
 
         if (tvTurnIndicator != null) {
             tvTurnIndicator.setText(isActivePlayer ? "Vi ste na potezu" : "Protivnik je na potezu");
@@ -144,6 +175,22 @@ public class StepByStepFragment extends Fragment {
         });
     }
 
+    private void takeOverAbandonedOwnerRound() {
+        if (roundDone) return;
+        isOpponentPhase = true;
+        currentRevealedStep = currentHints.size();
+        for (int i = 0; i < currentHints.size(); i++) revealStep(i);
+        etStepAnswer.setEnabled(true);
+        btnConfirmStep.setEnabled(true);
+        btnConfirmStep.setOnClickListener(v -> checkAnswer());
+        if (tvTurnIndicator != null) {
+            tvTurnIndicator.setText("Vi ste na potezu");
+        }
+        sharedViewModel.startRoundTimer(10, () -> {
+            if (!roundDone) publishOutcome(false, 0);
+        });
+    }
+
     private void revealStep(int index) {
         if (index >= 0 && index < steps.size() && index < currentHints.size()) {
             steps.get(index).setText(currentHints.get(index));
@@ -173,6 +220,14 @@ public class StepByStepFragment extends Fragment {
         if (tvTurnIndicator != null) {
             tvTurnIndicator.setText("Protivnik je na potezu");
         }
+
+        if (opponentAbandoned) {
+            // Protivnik (za koga bi ova sekundarna faza bila namenjena) je već napustio
+            // partiju - ne čekamo uzalud, odmah zatvaramo rundu bez dodatnih bodova.
+            publishOutcome(false, 0);
+            return;
+        }
+
         sharedViewModel.startRoundTimer(10, () -> {
             if (!roundDone) publishOutcome(false, 0);
         });
@@ -188,9 +243,14 @@ public class StepByStepFragment extends Fragment {
         roundDone = true;
         sharedViewModel.stopTimer();
 
-        if (isActivePlayer && !isOpponentPhase) {
+        if (sharedViewModel.isChallenge()) {
             writeStats(correct, currentRevealedStep, points);
-        } else if (!isActivePlayer && isOpponentPhase) {
+            showAnswerAndAdvance(correct, points);
+            return;
+        }
+
+        if ((isActivePlayer && !isOpponentPhase) || (!isActivePlayer && isOpponentPhase)) {
+            writeStats(correct, currentRevealedStep, points);
         }
 
         if (correct) sharedViewModel.addCurrentPlayerPoints(points);
@@ -216,6 +276,7 @@ public class StepByStepFragment extends Fragment {
     }
 
     private void listenToGameState() {
+        if (sharedViewModel.isChallenge()) return;
         if (matchId == null) return;
         if (isActivePlayer) {
             Map<String, Object> init = new HashMap<>();
@@ -258,7 +319,79 @@ public class StepByStepFragment extends Fragment {
         });
     }
 
+    private void startAbandonmentMonitoring() {
+        if (matchId == null || opponentAbandoned) return;
+        loadOpponentUserId();
+
+        if (abandonmentTimer != null) abandonmentTimer.cancel();
+        abandonmentTimer = gameStateMonitor.startAbandonmentWatch(
+                () -> opponentUserId,
+                () -> {
+                    if (!isAdded() || roundDone || opponentAbandoned) return;
+                    opponentAbandoned = true;
+                    handleOpponentAbandonment();
+                }
+        );
+    }
+
+    private void loadOpponentUserId() {
+        if (matchId == null) return;
+        new MatchRepository().getMatch(matchId).addOnSuccessListener(doc -> {
+            if (doc.exists()) {
+                boolean isP1 = sharedViewModel.getIsPlayer1();
+                opponentUserId = isP1 ? doc.getString("player2_id") : doc.getString("player1_id");
+            }
+        });
+    }
+
+    private void handleOpponentAbandonment() {
+        if (roundDone) return;
+        
+        if (matchId != null && opponentUserId != null) {
+            gameStateMonitor.detectAndHandleAbandonment(
+                    matchId,
+                    opponentUserId,
+                    com.google.firebase.auth.FirebaseAuth.getInstance().getUid()
+            ).addOnSuccessListener(wasAbandoned -> {
+                if (Boolean.TRUE.equals(wasAbandoned)) {
+                    sharedViewModel.setOpponentAbandoned(true);
+                    onOpponentConfirmedGone();
+                } else {
+                    opponentAbandoned = false;
+                    startAbandonmentMonitoring();
+                }
+            });
+        }
+    }
+
+    private void onOpponentConfirmedGone() {
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
+        }
+        boolean firstTime = !opponentAbandoned;
+        opponentAbandoned = true;
+        if (firstTime && isAdded()) {
+            Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
+        }
+        if (roundDone || !roundReady) return;
+        if (!isActivePlayer && !isOpponentPhase) {
+            // Runda pripada protivniku koji je otišao, a ja (prisutan igrač)
+            // je nisam još dobio priliku - preuzimam je odmah.
+            takeOverAbandonedOwnerRound();
+        }
+        // Ako je isActivePlayer, njegova primarna runda ide normalno dalje;
+        // startOpponentPhase() će, kad na red dođe, preskočiti čekanje jer je
+        // opponentAbandoned sada true. Ako sam ja (!isActivePlayer) već u svojoj
+        // sopstvenoj sekundarnoj fazi (isOpponentPhase), ne prekidamo je - i dalje
+        // sam prisutan i imam pravo da odigram svoj potez do kraja.
+    }
+
     private void showAnswerAndAdvance(boolean correct, int points) {
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
+        }
         btnConfirmStep.setEnabled(false);
         etStepAnswer.setText(currentAnswer);
         if (correct && isActivePlayer) {
@@ -277,5 +410,9 @@ public class StepByStepFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
         if (gameListener != null) gameListener.remove();
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
+        }
     }
 }

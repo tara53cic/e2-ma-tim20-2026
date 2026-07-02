@@ -91,6 +91,7 @@ public class IncomingRequestManager {
         stopTimer();
         String myUid = FirebaseAuth.getInstance().getUid();
         Match match = new Match(null, request.getFromUid(), myUid, 0, 0, "IN_PROGRESS");
+        match.setFriendly(true);
 
         matchRepo.createMatch(match).addOnSuccessListener(v -> {
             requestRepo.setMatchId(request.getId(), match.getId())

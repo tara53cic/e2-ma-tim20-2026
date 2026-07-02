@@ -15,8 +15,10 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.slagalica.R;
+import com.example.slagalica.data.MatchRepository;
 import com.example.slagalica.data.UserStatsRepository;
 import com.example.slagalica.domain.models.WhoKnowsQuestion;
+import com.example.slagalica.domain.service.GameStateMonitor;
 import com.example.slagalica.ui.match.MatchViewModel;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -54,6 +56,10 @@ public class WhoKnowsFragment extends Fragment {
     private String matchId;
     private ListenerRegistration questionListener;
     private ListenerRegistration dataListener;
+    private GameStateMonitor gameStateMonitor;
+    private java.util.Timer abandonmentTimer;
+    private String opponentUserId;
+    private boolean opponentAbandoned = false;
 
     private final List<WhoKnowsQuestion> questions = new ArrayList<>();
     private static final String[] PREFIXES = {"A) ", "B) ", "C) ", "D) "};
@@ -76,6 +82,22 @@ public class WhoKnowsFragment extends Fragment {
         viewModel       = new ViewModelProvider(this).get(WhoKnowsViewModel.class);
         sharedViewModel = new ViewModelProvider(requireActivity()).get(MatchViewModel.class);
         matchId = sharedViewModel.getMatchId();
+        gameStateMonitor = new GameStateMonitor();
+        
+        if (sharedViewModel.isChallenge()) {
+            opponentAbandoned = false;
+        } else {
+            if (Boolean.TRUE.equals(sharedViewModel.getIsOpponentAbandoned().getValue())) {
+                opponentAbandoned = true;
+            } else {
+                startAbandonmentMonitoring();
+            }
+            // Trenutna reakcija na osnovu match dokumenta (vidi MatchViewModel), ne čekamo
+            // isključivo spori online/inGame polling.
+            sharedViewModel.getIsOpponentAbandoned().observe(getViewLifecycleOwner(), abandoned -> {
+                if (Boolean.TRUE.equals(abandoned)) onOpponentConfirmedGone();
+            });
+        }
 
         tvQuestionNumber = view.findViewById(R.id.tvQuestionNumber);
         tvQuestion       = view.findViewById(R.id.tvQuestion);
@@ -88,7 +110,7 @@ public class WhoKnowsFragment extends Fragment {
         setButtonsEnabled(false);
         tvQuestion.setText("Učitavanje pitanja...");
 
-        if (sharedViewModel.getIsPlayer1()) {
+        if (sharedViewModel.isChallenge() || sharedViewModel.getIsPlayer1()) {
             viewModel.loadAndPublish(matchId);
             viewModel.getIsLoading().observe(getViewLifecycleOwner(), loading -> {
                 if (loading == null || loading) return;
@@ -116,6 +138,11 @@ public class WhoKnowsFragment extends Fragment {
 
     private void onDataReady() {
         if (dataLoaded) return;
+        
+        if (opponentAbandoned) {
+            writeOpponentDummyAnswers();
+        }
+
         List<WhoKnowsQuestion> loaded = viewModel.getQuestions().getValue();
         if (loaded == null || loaded.size() < TOTAL_QUESTIONS) {
             tvQuestion.setText("Greška: nema dovoljno pitanja u bazi.");
@@ -131,7 +158,9 @@ public class WhoKnowsFragment extends Fragment {
         btnAnswerC.setOnClickListener(v -> onAnswerClicked(2));
         btnAnswerD.setOnClickListener(v -> onAnswerClicked(3));
 
-        startListening();
+        if (!sharedViewModel.isChallenge()) {
+            startListening();
+        }
         loadQuestion(0);
     }
 
@@ -167,6 +196,11 @@ public class WhoKnowsFragment extends Fragment {
 
         writeAnswer(currentQuestion, selectedIndex, System.currentTimeMillis());
 
+        if (sharedViewModel.isChallenge()) {
+            evaluateQuestion(currentQuestion, selectedIndex, -1, System.currentTimeMillis(), Long.MAX_VALUE);
+            return;
+        }
+
         MaterialButton[] buttons = {btnAnswerA, btnAnswerB, btnAnswerC, btnAnswerD};
         setButtonColor(buttons[selectedIndex], COLOR_NEUTRAL);
         tvFeedback.setText("Čekanje protivnika...");
@@ -175,6 +209,7 @@ public class WhoKnowsFragment extends Fragment {
     }
 
     private void writeAnswer(int qIndex, int answerIndex, long timestamp) {
+        if (sharedViewModel.isChallenge()) return;
         if (matchId == null) return;
         String prefix = sharedViewModel.getIsPlayer1() ? "p1" : "p2";
         Map<String, Object> data = new HashMap<>();
@@ -330,8 +365,84 @@ public class WhoKnowsFragment extends Fragment {
     private void advanceGamePhase() {
         if (gameAdvanceCalled || !isAdded()) return;
         gameAdvanceCalled = true;
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
+        }
         sharedViewModel.stopTimer();
         sharedViewModel.advanceGamePhase();
+    }
+
+    private void startAbandonmentMonitoring() {
+        if (matchId == null || opponentAbandoned) return;
+        loadOpponentUserId();
+
+        if (abandonmentTimer != null) abandonmentTimer.cancel();
+        abandonmentTimer = gameStateMonitor.startAbandonmentWatch(
+                () -> opponentUserId,
+                () -> {
+                    if (!isAdded() || gameAdvanceCalled || opponentAbandoned) return;
+                    opponentAbandoned = true;
+                    handleOpponentAbandonment();
+                }
+        );
+    }
+
+    private void loadOpponentUserId() {
+        if (matchId == null) return;
+        new MatchRepository().getMatch(matchId).addOnSuccessListener(doc -> {
+            if (doc.exists()) {
+                boolean isP1 = sharedViewModel.getIsPlayer1();
+                opponentUserId = isP1 ? doc.getString("player2_id") : doc.getString("player1_id");
+            }
+        });
+    }
+
+    private void handleOpponentAbandonment() {
+        if (matchId != null && opponentUserId != null) {
+            gameStateMonitor.detectAndHandleAbandonment(
+                    matchId,
+                    opponentUserId,
+                    com.google.firebase.auth.FirebaseAuth.getInstance().getUid()
+            ).addOnSuccessListener(wasAbandoned -> {
+                if (Boolean.TRUE.equals(wasAbandoned)) {
+                    sharedViewModel.setOpponentAbandoned(true);
+                    onOpponentConfirmedGone();
+                } else {
+                    opponentAbandoned = false;
+                    startAbandonmentMonitoring();
+                }
+            });
+        }
+    }
+
+    private void onOpponentConfirmedGone() {
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
+        }
+        boolean firstTime = !opponentAbandoned;
+        opponentAbandoned = true;
+        if (firstTime && isAdded()) {
+            Toast.makeText(getContext(), "Protivnik je napustio igru!", Toast.LENGTH_SHORT).show();
+        }
+        if (gameAdvanceCalled) return;
+        writeOpponentDummyAnswers();
+    }
+
+    private void writeOpponentDummyAnswers() {
+        if (matchId == null) return;
+        String prefix = sharedViewModel.getIsPlayer1() ? "p2" : "p1";
+        Map<String, Object> data = new HashMap<>();
+        for (int i = 0; i < TOTAL_QUESTIONS; i++) {
+            data.put(prefix + "_ans_" + i, -1);
+            data.put(prefix + "_ts_" + i, Long.MAX_VALUE);
+        }
+        data.put(prefix + "done", true);
+        FirebaseFirestore.getInstance()
+                .collection("matches").document(matchId)
+                .collection("games").document("kzz")
+                .set(data, com.google.firebase.firestore.SetOptions.merge());
     }
 
     private void setButtonsEnabled(boolean enabled) {
@@ -358,5 +469,9 @@ public class WhoKnowsFragment extends Fragment {
         handler.removeCallbacksAndMessages(null);
         if (questionListener != null) questionListener.remove();
         if (dataListener != null) dataListener.remove();
+        if (abandonmentTimer != null) {
+            abandonmentTimer.cancel();
+            abandonmentTimer = null;
+        }
     }
 }

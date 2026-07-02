@@ -4,5 +4,6 @@ public enum NotificationType {
     CHAT,
     RANKING,
     REWARDS,
+    GAME_INVITATION,
     OTHER
 }

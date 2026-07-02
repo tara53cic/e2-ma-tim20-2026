@@ -75,5 +75,29 @@ public class MatchRepository {
         }
         return null;
     }
+
+    public Task<Void> recordPlayerAbandonment(String matchId, String abandonedByUserId) {
+        return db.collection("matches").document(matchId)
+                .update("abandonedBy", abandonedByUserId, "status", "FINISHED");
+    }
+
+    // Upisuje da je igrač napustio MatchFragment dok je partija bila u toku - trenutan,
+    // pouzdan signal (za razliku od sporog online/inGame pollinga). Ne diramo "status" ovde
+    // jer partija treba da NASTAVI za prisutnog igrača do kraja svih igara.
+    public Task<Void> markPlayerLeft(String matchId, String userId) {
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("abandonedBy", userId);
+        return db.collection("matches").document(matchId)
+                .set(data, com.google.firebase.firestore.SetOptions.merge());
+    }
+
+    public Task<Void> recordPlayerTimeout(String matchId, boolean isPlayer1) {
+        String field = isPlayer1 ? "player1_timedOut" : "player2_timedOut";
+        return db.collection("matches").document(matchId).update(field, true);
+    }
+
+    public Task<DocumentSnapshot> getMatch(String matchId) {
+        return db.collection("matches").document(matchId).get();
+    }
 }
 

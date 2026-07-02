@@ -24,7 +24,10 @@ public class GameStateRepository {
     }
 
     public Task<Void> update(String matchId, String gameKey, Map<String, Object> fields) {
-        return gameDoc(matchId, gameKey).update(fields);
+        // set+merge umesto update(): kad protivnik napusti partiju pre nego što je
+        // ovaj dokument uopšte kreiran, prisutni igrač i dalje mora moći da upiše
+        // stanje (update() bi tiho failovao sa NOT_FOUND na nepostojećem dokumentu).
+        return gameDoc(matchId, gameKey).set(fields, com.google.firebase.firestore.SetOptions.merge());
     }
 
     public ListenerRegistration listen(String matchId, String gameKey,

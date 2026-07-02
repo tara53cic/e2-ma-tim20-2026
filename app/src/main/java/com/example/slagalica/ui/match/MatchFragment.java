@@ -64,8 +64,13 @@ public class MatchFragment extends Fragment {
 
         if (getArguments() != null) {
             String matchId = getArguments().getString("MATCH_ID");
+            String challengeId = getArguments().getString("CHALLENGE_ID");
+            String regionId = getArguments().getString("REGION_ID");
+
             if (matchId != null) {
                 matchViewModel.initMatch(matchId);
+            } else if (challengeId != null && regionId != null) {
+                matchViewModel.initChallenge(challengeId, regionId);
             } else {
                 Navigation.findNavController(view).popBackStack();
                 return;
@@ -73,6 +78,11 @@ public class MatchFragment extends Fragment {
         } else {
             Navigation.findNavController(view).popBackStack();
             return;
+        }
+
+        if (matchViewModel.isChallenge()) {
+            View player2Card = view.findViewById(R.id.player2Card);
+            if (player2Card != null) player2Card.setVisibility(View.GONE);
         }
 
         matchViewModel.getTimeRemaining().observe(getViewLifecycleOwner(),
@@ -135,9 +145,8 @@ public class MatchFragment extends Fragment {
         });
 
         if (savedInstanceState == null) {
-            userRepository.deductTokens(5);
-            userRepository.setInGame(true);
         }
+        userRepository.setInGame(true);
 
         View bottomNav = requireActivity().findViewById(R.id.bottom_nav);
         if (bottomNav != null) bottomNav.setVisibility(View.GONE);
@@ -146,7 +155,10 @@ public class MatchFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        userRepository.setInGame(false);
+        if (getActivity() != null && !getActivity().isChangingConfigurations()) {
+            userRepository.setInGame(false);
+            matchViewModel.markLeftIfMidMatch();
+        }
         View bottomNav = requireActivity().findViewById(R.id.bottom_nav);
         if (bottomNav != null) bottomNav.setVisibility(View.VISIBLE);
     }
