@@ -80,6 +80,11 @@ public class MatchFragment extends Fragment {
             return;
         }
 
+        if (matchViewModel.isChallenge()) {
+            View player2Card = view.findViewById(R.id.player2Card);
+            if (player2Card != null) player2Card.setVisibility(View.GONE);
+        }
+
         matchViewModel.getTimeRemaining().observe(getViewLifecycleOwner(),
                 time -> tvTimer.setText(String.valueOf(time)));
 

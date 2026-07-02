@@ -189,6 +189,11 @@ public class WhoKnowsFragment extends Fragment {
 
         writeAnswer(currentQuestion, selectedIndex, System.currentTimeMillis());
 
+        if (sharedViewModel.isChallenge()) {
+            evaluateQuestion(currentQuestion, selectedIndex, -1, System.currentTimeMillis(), Long.MAX_VALUE);
+            return;
+        }
+
         MaterialButton[] buttons = {btnAnswerA, btnAnswerB, btnAnswerC, btnAnswerD};
         setButtonColor(buttons[selectedIndex], COLOR_NEUTRAL);
         tvFeedback.setText("Čekanje protivnika...");

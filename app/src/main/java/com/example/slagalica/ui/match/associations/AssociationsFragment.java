@@ -121,6 +121,11 @@ public class AssociationsFragment extends Fragment {
     }
 
     private void initializeRoundIfNeeded() {
+        if (sharedViewModel.isChallenge()) {
+            loadChallengePuzzle();
+            return;
+        }
+
         boolean normallyInitiator = "assoc_r1".equals(gameKey)
                 ? sharedViewModel.getIsPlayer1()
                 : !sharedViewModel.getIsPlayer1();
@@ -147,6 +152,43 @@ public class AssociationsFragment extends Fragment {
 
                     Map<String, Object> data = createInitialAssociationState(puzzleDoc);
                     gameStateRepo.set(matchId, gameKey, data);
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+
+                    Toast.makeText(
+                            requireContext(),
+                            "Greška pri učitavanju asocijacije.",
+                            Toast.LENGTH_SHORT
+                    ).show();
+                });
+    }
+
+    private void loadChallengePuzzle() {
+        associationRepo.fetchActivePuzzles()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (!isAdded()) return;
+
+                    if (querySnapshot.isEmpty()) {
+                        Toast.makeText(
+                                requireContext(),
+                                "Nema asocijacija u bazi.",
+                                Toast.LENGTH_SHORT
+                        ).show();
+                        return;
+                    }
+
+                    int randomIndex = new Random().nextInt(querySnapshot.size());
+                    DocumentSnapshot puzzleDoc = querySnapshot.getDocuments().get(randomIndex);
+
+                    // Puzzle dokument ima istu strukturu (fields/columnSolutions/finalSolution)
+                    // kao inicijalno stanje partije, pa se isti parser može ponovo iskoristiti.
+                    loadPuzzleFromSnapshot(puzzleDoc);
+                    activeFirestorePlayer = 1;
+                    associationsViewModel.currentPlayer = 1;
+
+                    refreshInputState();
+                    refreshFieldButtonsState();
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;

@@ -79,9 +79,16 @@ public class ChallengeAdapter extends RecyclerView.Adapter<ChallengeAdapter.Chal
             tvPlayers.setText("Igrači: " + challenge.getPlayerIds().size() + "/4");
 
             if (challenge.getPlayerIds().contains(currentUid)) {
-                btnJoin.setText("Uđi");
+                if ("IN_PROGRESS".equals(challenge.getStatus())) {
+                    btnJoin.setText("Uđi");
+                    btnJoin.setEnabled(true);
+                } else {
+                    btnJoin.setText("Čekanje...");
+                    btnJoin.setEnabled(false);
+                }
             } else {
                 btnJoin.setText("Pridruži se");
+                btnJoin.setEnabled(true);
             }
 
             btnJoin.setOnClickListener(v -> onJoinClickListener.onJoin(challenge));

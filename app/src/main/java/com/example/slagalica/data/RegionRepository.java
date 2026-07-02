@@ -71,7 +71,7 @@ public class RegionRepository {
     public Query getChallenges(String region) {
         return db.collection("regions").document(region)
                 .collection("challenges")
-                .whereEqualTo("status", "OPEN");
+                .whereIn("status", java.util.Arrays.asList("OPEN", "IN_PROGRESS"));
     }
 
     public Task<Void> joinChallenge(String region, String challengeId, String userId, String userName) {

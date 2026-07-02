@@ -31,6 +31,12 @@ public class WhoKnowsViewModel extends ViewModel {
                     Collections.shuffle(all);
                     List<WhoKnowsQuestion> selected = new ArrayList<>(
                             all.size() >= 5 ? all.subList(0, 5) : all);
+                    if (matchId == null) {
+                        // Izazov (solo partija) nema match dokument u koji bi se objavilo.
+                        questions.setValue(selected);
+                        isLoading.setValue(false);
+                        return;
+                    }
                     repository.publishQuestions(matchId, selected)
                             .addOnSuccessListener(v -> {
                                 questions.setValue(selected);

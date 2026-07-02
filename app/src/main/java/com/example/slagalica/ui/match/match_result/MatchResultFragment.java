@@ -71,9 +71,17 @@ public class MatchResultFragment extends Fragment {
         String matchId = sharedViewModel.getMatchId();
         
         if (sharedViewModel.isChallenge()) {
-            tvResultInfo.setText("Izazov završen!");
-            tvStarsWon.setText("Rezultat sačuvan.");
-            tvTokensWon.setText("Proverite tabelu.");
+            tvResultInfo.setText("Čekanje ostalih igrača...");
+            tvStarsWon.setText("");
+            tvTokensWon.setText("");
+            sharedViewModel.getChallengeOutcome().observe(getViewLifecycleOwner(), outcome -> {
+                if (outcome == null) return;
+                String place = outcome.placement + ". mesto od " + outcome.totalPlayers;
+                tvResultInfo.setText((outcome.isWinner ? "Pobedili ste izazov! " : "Izazov završen. ")
+                        + "Poena: " + outcome.myScore + " (" + place + ")");
+                tvStarsWon.setText((outcome.starsChange > 0 ? "+" : "") + outcome.starsChange);
+                tvTokensWon.setText((outcome.tokensChange > 0 ? "+" : "") + outcome.tokensChange);
+            });
         } else {
             resultViewModel.calculateAndSaveStats(isPlayer1, p1Score, p2Score, matchId, false, false);
         }

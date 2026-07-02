@@ -328,11 +328,14 @@ public class NumberGameFragment extends Fragment {
         String expr = viewModel.submitResult();
         Double result = evaluateMathExpressionUseCase.evaluate(expr);
         long resLong = result != null ? Math.round(result) : 0L;
-        int score = scoringService.calculateScore(expr, Integer.parseInt(viewModel.getTargetNumber().getValue()));
+        String targetStr = viewModel.getTargetNumber().getValue();
+        long targetLong = targetStr != null && !targetStr.equals("---") ? Long.parseLong(targetStr) : 0;
 
         if (sharedViewModel.isChallenge()) {
-            writeStats(true, score);
-            sharedViewModel.addCurrentPlayerPoints(score);
+            int points = scoringService.calculatePoints(targetLong, resLong, 0, true);
+            writeStats(resLong == targetLong, points);
+            sharedViewModel.addCurrentPlayerPoints(points);
+            Toast.makeText(getContext(), getString(R.string.game_result_toast, resLong, points), Toast.LENGTH_LONG).show();
             sharedViewModel.advanceGamePhase();
             return;
         }
@@ -346,8 +349,6 @@ public class NumberGameFragment extends Fragment {
             View btnClearAll = getView() != null ? getView().findViewById(R.id.btnClearAll) : null;
             if (btnClearAll != null) btnClearAll.setEnabled(false);
         } else {
-            String targetStr = viewModel.getTargetNumber().getValue();
-            long targetLong = targetStr != null && !targetStr.equals("---") ? Long.parseLong(targetStr) : 0;
             int points = scoringService.calculatePoints(targetLong, resLong, 0, isActivePlayer);
 
             writeStats(resLong == targetLong, points);

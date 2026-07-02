@@ -408,6 +408,11 @@ public class MatchingFragment extends Fragment {
 
             if (matchedCount == 5) { writeFinish(); return; }
 
+            if (sharedViewModel.isChallenge()) {
+                if (allStarterUsed()) writeFinish();
+                return;
+            }
+
             if (!iAmStarter && "SECOND".equals(localPhase) && allSecondUsed()) { writeFinish(); return; }
 
             if (iAmStarter && "STARTER".equals(localPhase) && allStarterUsed())
@@ -419,6 +424,15 @@ public class MatchingFragment extends Fragment {
             handler.postDelayed(() -> {
                 if (isAdded()) tint(rightButtons[rightIdx], C_DEFAULT);
             }, 700);
+
+            if (sharedViewModel.isChallenge()) {
+                starterUsed[prevLeft] = true;
+                tint(leftButtons[prevLeft], C_FAILED);
+                leftButtons[prevLeft].setAlpha(0.5f);
+                leftButtons[prevLeft].setEnabled(false);
+                if (allStarterUsed()) writeFinish();
+                return;
+            }
 
             if (iAmStarter && "STARTER".equals(localPhase)) {
                 starterUsed[prevLeft] = true;

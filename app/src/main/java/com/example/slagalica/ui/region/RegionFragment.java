@@ -3,6 +3,8 @@ package com.example.slagalica.ui.region;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -45,8 +47,11 @@ import com.example.slagalica.domain.models.Challenge;
 import com.google.firebase.Timestamp;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class RegionFragment extends Fragment {
 
@@ -66,6 +71,15 @@ public class RegionFragment extends Fragment {
     private RegionRepository regionRepository = new RegionRepository();
     private boolean mapReady = false;
     private String selectedRegion = "";
+
+    private static final long CHALLENGE_ABANDON_MS = 10 * 60 * 1000L; // izazov "zaglavljen" u toku - napušten
+
+    private List<Challenge> latestChallenges = new ArrayList<>();
+    private final Set<String> navigatedChallenges = new HashSet<>();
+    private final Set<String> timeoutProcessed = new HashSet<>();
+    private final java.util.Map<String, Long> lastWaitToastAt = new java.util.HashMap<>();
+    private final Handler challengeTimeoutHandler = new Handler(Looper.getMainLooper());
+    private Runnable challengeTimeoutTicker;
 
     @Nullable
     @Override
@@ -384,7 +398,7 @@ public class RegionFragment extends Fragment {
         if (challenge.getPlayerIds().contains(uid)) {
             // Već je unutra
             if (challenge.getStatus().equals("IN_PROGRESS")) {
-                startChallengeGame(challenge);
+                triggerChallengeStart(challenge);
             }
             return;
         }
@@ -411,10 +425,9 @@ public class RegionFragment extends Fragment {
             regionRepository.joinChallenge(selectedRegion, challenge.getId(), uid, name)
                 .addOnSuccessListener(v -> {
                     Toast.makeText(requireContext(), "Pridružio si se izazovu!", Toast.LENGTH_SHORT).show();
-                    // Ako je sad 4, prebaci u IN_PROGRESS
+                    // Ako je sad 4, prebaci u IN_PROGRESS (listener će pokrenuti igru za sve učesnike)
                     if (challenge.getPlayerIds().size() + 1 == 4) {
                         regionRepository.updateChallengeStatus(selectedRegion, challenge.getId(), "IN_PROGRESS");
-                        startChallengeGame(challenge);
                     }
                 });
         });
@@ -425,6 +438,12 @@ public class RegionFragment extends Fragment {
         bundle.putString("CHALLENGE_ID", challenge.getId());
         bundle.putString("REGION_ID", selectedRegion);
         Navigation.findNavController(requireView()).navigate(R.id.action_nav_region_to_matchFragment, bundle);
+    }
+
+    private void triggerChallengeStart(Challenge challenge) {
+        if (!isAdded() || challenge.getId() == null) return;
+        if (!navigatedChallenges.add(challenge.getId())) return; // već pokrenuto za ovaj izazov
+        startChallengeGame(challenge);
     }
 
     private void startChatListener() {
@@ -464,52 +483,97 @@ public class RegionFragment extends Fragment {
                         return;
                     }
                     if (snapshot == null) return;
-                    List<Challenge> challenges = snapshot.toObjects(Challenge.class);
-                    
-                    // Provera za automatsko pokretanje ili brisanje
-                    long now = System.currentTimeMillis();
-                    String myUid = regionRepository.getCurrentUid();
-                    
-                    for (Challenge c : challenges) {
-                        if (c.getCreatedAt() == null) continue;
-                        long elapsed = now - c.getCreatedAt().toDate().getTime();
-                        
-                        // Ako je prošlo više od 60s
-                        if ("OPEN".equals(c.getStatus()) && elapsed > 60000) {
-                            if (c.getPlayerIds().size() > 1) {
-                                // Više od jednog igrača -> START
-                                if (myUid.equals(c.getChallengerId())) {
-                                    regionRepository.updateChallengeStatus(selectedRegion, c.getId(), "IN_PROGRESS");
-                                }
-                            } else {
-                                // Samo kreator -> ISTEKAO (brišemo ili menjamo status)
-                                if (myUid.equals(c.getChallengerId())) {
-                                    regionRepository.updateChallengeStatus(selectedRegion, c.getId(), "EXPIRED");
-                                    // Vratiti ulog kreatoru
-                                    UserRepository userRepo = new UserRepository();
-                                    userRepo.addStars(c.getBidStars());
-                                    userRepo.addTokens(c.getBidTokens());
-                                }
-                            }
-                        }
-                        
-                        // Ako je status postao IN_PROGRESS, a ja sam unutra, pokreni igru
-                        if ("IN_PROGRESS".equals(c.getStatus()) && c.getPlayerIds().contains(myUid)) {
-                            // Proveri da li smo već pokrenuli (opciono, navigacija će handle-ovati)
-                            startChallengeGame(c);
-                        }
-                    }
-
-                    if (challengeAdapter != null) {
-                        challengeAdapter.setChallenges(challenges);
-                    }
+                    latestChallenges = snapshot.toObjects(Challenge.class);
+                    evaluateChallenges();
                 });
+
+        // Firestore listener se okida samo na promenu podataka, pa je potreban i
+        // periodični tik da bi se isticanje od 60s uočilo i bez novog pisanja u bazu.
+        challengeTimeoutTicker = new Runnable() {
+            @Override
+            public void run() {
+                evaluateChallenges();
+                challengeTimeoutHandler.postDelayed(this, 1000);
+            }
+        };
+        challengeTimeoutHandler.postDelayed(challengeTimeoutTicker, 1000);
+    }
+
+    private void evaluateChallenges() {
+        if (!isAdded() || challengeAdapter == null) return;
+
+        List<Challenge> filteredChallenges = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        String myUid = regionRepository.getCurrentUid();
+
+        for (Challenge c : latestChallenges) {
+            if (c.getCreatedAt() == null) continue;
+            long elapsed = now - c.getCreatedAt().toDate().getTime();
+
+            // Ako je prošlo više od 60s, obradi jednom po izazovu
+            if ("OPEN".equals(c.getStatus()) && elapsed > 60000 && timeoutProcessed.add(c.getId())) {
+                if (c.getPlayerIds().size() > 1) {
+                    // Više od jednog igrača -> START
+                    // Bilo ko ko je u izazovu može da ga pokrene nakon isteka vremena
+                    if (c.getPlayerIds().contains(myUid)) {
+                        regionRepository.updateChallengeStatus(selectedRegion, c.getId(), "IN_PROGRESS");
+                    }
+                } else {
+                    // Samo kreator -> ISTEKAO
+                    if (myUid.equals(c.getChallengerId())) {
+                        regionRepository.updateChallengeStatus(selectedRegion, c.getId(), "EXPIRED");
+                        // Vratiti ulog kreatoru
+                        UserRepository userRepo = new UserRepository();
+                        userRepo.addStars(c.getBidStars());
+                        userRepo.addTokens(c.getBidTokens());
+                        Toast.makeText(requireContext(),
+                                "Niko se nije pridružio tvom izazovu. Ulog ti je vraćen.",
+                                Toast.LENGTH_LONG).show();
+                    }
+                }
+            }
+
+            // Dok se čeka da se neko pridruži, povremeno obavesti korisnika
+            if ("OPEN".equals(c.getStatus()) && elapsed <= 60000 && c.getPlayerIds().contains(myUid)) {
+                Long lastToast = lastWaitToastAt.get(c.getId());
+                if (lastToast == null || now - lastToast > 5000) {
+                    lastWaitToastAt.put(c.getId(), now);
+                    Toast.makeText(requireContext(), "Čekanje protivnika...", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            // Izazov zaglavljen u IN_PROGRESS predugo (npr. igrač je napustio partiju i
+            // nikad je nije završio) - očisti ga da se više ne prikazuje niti ponovo pokreće.
+            if ("IN_PROGRESS".equals(c.getStatus()) && elapsed > CHALLENGE_ABANDON_MS
+                    && timeoutProcessed.add("abandon_" + c.getId())) {
+                regionRepository.updateChallengeStatus(selectedRegion, c.getId(), "ABANDONED");
+                continue;
+            }
+
+            // Ako je status IN_PROGRESS, a ja sam unutra, pokreni igru (jednom)
+            if ("IN_PROGRESS".equals(c.getStatus()) && c.getPlayerIds().contains(myUid)) {
+                triggerChallengeStart(c);
+            }
+
+            // Filtriraj šta prikazujemo u listi
+            if ("OPEN".equals(c.getStatus())) {
+                filteredChallenges.add(c);
+            } else if ("IN_PROGRESS".equals(c.getStatus()) && c.getPlayerIds().contains(myUid)) {
+                filteredChallenges.add(c);
+            }
+        }
+
+        challengeAdapter.setChallenges(filteredChallenges);
     }
 
     private void stopChallengeListener() {
         if (challengeListener != null) {
             challengeListener.remove();
             challengeListener = null;
+        }
+        if (challengeTimeoutTicker != null) {
+            challengeTimeoutHandler.removeCallbacks(challengeTimeoutTicker);
+            challengeTimeoutTicker = null;
         }
     }
 
@@ -557,6 +621,8 @@ public class RegionFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
         setOnlineStatus(false);
+        stopChatListener();
+        stopChallengeListener();
         if (mapWebView != null) mapWebView.destroy();
     }
 }

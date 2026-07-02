@@ -46,6 +46,31 @@ public class MatchViewModel extends ViewModel {
     private boolean isChallenge = false;
     private String challengeId;
     private String regionId;
+    private ListenerRegistration challengeResultListener;
+    private boolean challengeRewardsProcessed = false;
+
+    private final MutableLiveData<ChallengeOutcome> challengeOutcome = new MutableLiveData<>();
+
+    public static class ChallengeOutcome {
+        public final int placement;
+        public final int totalPlayers;
+        public final int myScore;
+        public final int starsChange;
+        public final int tokensChange;
+        public final boolean isWinner;
+
+        public ChallengeOutcome(int placement, int totalPlayers, int myScore,
+                                 int starsChange, int tokensChange, boolean isWinner) {
+            this.placement = placement;
+            this.totalPlayers = totalPlayers;
+            this.myScore = myScore;
+            this.starsChange = starsChange;
+            this.tokensChange = tokensChange;
+            this.isWinner = isWinner;
+        }
+    }
+
+    public LiveData<ChallengeOutcome> getChallengeOutcome() { return challengeOutcome; }
 
     public String getMatchId() { return matchId; }
     public boolean getIsPlayer1() { return isPlayer1; }
@@ -225,44 +250,70 @@ public class MatchViewModel extends ViewModel {
         } else if ("KZZ".equals(current)) {
             currentFragment.setValue("FINISHED");
             if (isChallenge) {
-                if (player1Score.getValue() != null) {
-                    regionRepo.updateChallengeScore(regionId, challengeId, currentUserId, player1Score.getValue())
-                        .addOnSuccessListener(v -> checkAndDistributeRewards());
-                }
+                int myScore = player1Score.getValue() != null ? player1Score.getValue() : 0;
+                regionRepo.updateChallengeScore(regionId, challengeId, currentUserId, myScore)
+                        .addOnSuccessListener(v -> listenForChallengeOutcome());
             }
         } else {
             currentFragment.setValue("FINISHED");
         }
     }
 
-    private void checkAndDistributeRewards() {
-        regionRepo.getChallengeReference(regionId, challengeId).get().addOnSuccessListener(snapshot -> {
-            Challenge challenge = snapshot.toObject(Challenge.class);
-            if (challenge == null || !"IN_PROGRESS".equals(challenge.getStatus())) return;
-            if (challenge.getPlayersFinished().size() == challenge.getPlayerIds().size()) {
-                distributeChallengeRewards(challenge);
-            }
-        });
-    }
+    // Svaki učesnik nezavisno prati izazov (nema centralnog "sudije"), pa se nagrade
+    // moraju obračunati preko listenera na svakom uređaju čim svi igrači završe -
+    // jednokratni get() bi nagradio samo pobednika ako je on slučajno poslednji koji završi.
+    private void listenForChallengeOutcome() {
+        if (challengeResultListener != null) return;
+        challengeResultListener = regionRepo.getChallengeReference(regionId, challengeId)
+                .addSnapshotListener((snapshot, e) -> {
+                    if (e != null || snapshot == null || !snapshot.exists()) return;
+                    Challenge challenge = snapshot.toObject(Challenge.class);
+                    if (challenge == null) return;
 
-    private void distributeChallengeRewards(Challenge challenge) {
-        List<Map.Entry<String, Integer>> sorted = new ArrayList<>(challenge.getPlayerScores().entrySet());
-        sorted.sort((e1, e2) -> e2.getValue().compareTo(e1.getValue()));
-        if (sorted.isEmpty()) return;
+                    Map<String, Boolean> finished = challenge.getPlayersFinished();
+                    if (finished == null || finished.size() < challenge.getPlayerIds().size()) return;
 
-        int numPlayers = challenge.getPlayerIds().size();
-        int winnerStars = (int) (0.75 * numPlayers * challenge.getBidStars());
-        int winnerTokens = (int) (0.75 * numPlayers * challenge.getBidTokens());
-        String winnerId = sorted.get(0).getKey();
-        String secondId = sorted.size() > 1 ? sorted.get(1).getKey() : null;
+                    List<Map.Entry<String, Integer>> sorted = new ArrayList<>(challenge.getPlayerScores().entrySet());
+                    sorted.sort((e1, e2) -> e2.getValue().compareTo(e1.getValue()));
+                    if (sorted.isEmpty()) return;
 
-        regionRepo.updateChallengeStatus(regionId, challengeId, "FINISHED").addOnSuccessListener(v -> {
-            if (currentUserId.equals(winnerId)) {
-                userRepository.addStars(winnerStars).addOnSuccessListener(v2 -> userRepository.addTokens(winnerTokens));
-            } else if (secondId != null && currentUserId.equals(secondId)) {
-                userRepository.addStars(challenge.getBidStars()).addOnSuccessListener(v2 -> userRepository.addTokens(challenge.getBidTokens()));
-            }
-        });
+                    int numPlayers = challenge.getPlayerIds().size();
+                    int winnerStars = (int) (0.75 * numPlayers * challenge.getBidStars());
+                    int winnerTokens = (int) (0.75 * numPlayers * challenge.getBidTokens());
+                    String winnerId = sorted.get(0).getKey();
+                    String secondId = sorted.size() > 1 ? sorted.get(1).getKey() : null;
+
+                    int placement = numPlayers;
+                    for (int i = 0; i < sorted.size(); i++) {
+                        if (sorted.get(i).getKey().equals(currentUserId)) {
+                            placement = i + 1;
+                            break;
+                        }
+                    }
+
+                    boolean isWinner = currentUserId.equals(winnerId);
+                    int starsChange = 0;
+                    int tokensChange = 0;
+                    if (isWinner) {
+                        starsChange = winnerStars;
+                        tokensChange = winnerTokens;
+                    } else if (secondId != null && currentUserId.equals(secondId)) {
+                        starsChange = challenge.getBidStars();
+                        tokensChange = challenge.getBidTokens();
+                    }
+
+                    Integer myScore = challenge.getPlayerScores().get(currentUserId);
+                    challengeOutcome.postValue(new ChallengeOutcome(
+                            placement, numPlayers, myScore != null ? myScore : 0,
+                            starsChange, tokensChange, isWinner));
+
+                    if (!challengeRewardsProcessed && !"FINISHED".equals(challenge.getStatus())) {
+                        challengeRewardsProcessed = true;
+                        if (starsChange > 0) userRepository.addStars(starsChange);
+                        if (tokensChange > 0) userRepository.addTokens(tokensChange);
+                        regionRepo.updateChallengeStatus(regionId, challengeId, "FINISHED");
+                    }
+                });
     }
 
     @Override
@@ -270,10 +321,11 @@ public class MatchViewModel extends ViewModel {
         super.onCleared();
         if (timer != null) timer.cancel();
         if (matchListener != null) matchListener.remove();
+        if (challengeResultListener != null) challengeResultListener.remove();
     }
 
     public void shouldDeductToken(boolean isFriendly) {
-        if (matchId != null && !isTokenDeducted && !isFriendly) {
+        if (matchId != null && !isTokenDeducted && !isFriendly && !isChallenge) {
             userRepository.deductTokens(1);
             isTokenDeducted = true;
         }

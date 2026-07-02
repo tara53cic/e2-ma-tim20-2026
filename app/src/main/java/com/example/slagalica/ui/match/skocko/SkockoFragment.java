@@ -276,6 +276,15 @@ public class SkockoFragment extends Fragment {
             stopTimer();
             writeGuesserStats(true, viewModel.currentAttempt, points);
             sharedViewModel.addCurrentPlayerPoints(points);
+
+            if (sharedViewModel.isChallenge()) {
+                localRoundDone = true;
+                handler.postDelayed(() -> {
+                    if (isAdded()) sharedViewModel.advanceGamePhase();
+                }, 1500);
+                return;
+            }
+
             if (matchId != null) {
                 Map<String, Object> updates = new HashMap<>();
                 updates.put("playerTurnDone", true);
@@ -312,7 +321,7 @@ public class SkockoFragment extends Fragment {
     private void writeGuesserTurnDone(boolean solved) {
         if (sharedViewModel.isChallenge()) {
             localRoundDone = true;
-            writeStats(solved, viewModel.calculatePlayerPoints(), 0);
+            writeGuesserStats(solved, viewModel.currentAttempt, viewModel.calculatePlayerPoints());
             sharedViewModel.advanceGamePhase();
             return;
         }
